@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/errorHandler.js';
 import taskRoutes from './routes/task.routes.js';
+import calendarRoutes from './routes/calendar.routes.js';
 
 const app = express();
 
@@ -15,8 +16,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/tasks', taskRoutes);
-
-// TODO: mount calendar.routes.js here once implemented
+app.use('/api/calendar-events', calendarRoutes);
 
 app.use(errorHandler);
 
