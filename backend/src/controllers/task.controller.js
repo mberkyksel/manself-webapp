@@ -1,15 +1,8 @@
-import { Task, Board, User } from '../models/index.js';
+import { Task, Board } from '../models/index.js';
+import { getDefaultUser } from '../services/demoUser.service.js';
 
-// No authentication yet, so every request operates against a single demo
-// user/board. Once useAuth lands, replace this with req.user's own board.
 async function getDefaultBoard() {
-  const [user] = await User.findOrCreate({
-    where: { email: 'demo@manself.local' },
-    defaults: {
-      name: 'Demo User',
-      passwordHash: 'unused-until-auth-is-implemented',
-    },
-  });
+  const user = await getDefaultUser();
 
   const [board] = await Board.findOrCreate({
     where: { userId: user.id },
