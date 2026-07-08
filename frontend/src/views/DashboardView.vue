@@ -1,8 +1,17 @@
+<script setup>
+import WelcomeBanner from '../components/dashboard/WelcomeBanner.vue';
+import ClockWidget from '../components/dashboard/ClockWidget.vue';
+</script>
+
 <template>
-  <main class="min-h-screen bg-slate-100 flex items-center justify-center">
-    <div class="text-center">
-      <h1 class="text-3xl font-semibold text-slate-800">ManSelf Dashboard</h1>
-      <p class="mt-2 text-slate-500">Welcome banner, calendar, and kanban board land here.</p>
+  <main class="min-h-screen bg-slate-100 px-6 py-8">
+    <div class="mx-auto flex max-w-4xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+      <WelcomeBanner />
+      <ClockWidget />
+    </div>
+
+    <div class="mx-auto mt-8 max-w-4xl text-slate-400">
+      <p>Calendar and kanban board land here.</p>
     </div>
   </main>
 </template>
