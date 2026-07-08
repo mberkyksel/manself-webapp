@@ -1,6 +1,7 @@
 <script setup>
 import WelcomeBanner from '../components/dashboard/WelcomeBanner.vue';
 import ClockWidget from '../components/dashboard/ClockWidget.vue';
+import KanbanBoard from '../components/kanban/KanbanBoard.vue';
 </script>
 
 <template>
@@ -11,7 +12,11 @@ import ClockWidget from '../components/dashboard/ClockWidget.vue';
     </div>
 
     <div class="mx-auto mt-8 max-w-4xl text-slate-400">
-      <p>Calendar and kanban board land here.</p>
+      <p>Calendar view lands here.</p>
+    </div>
+
+    <div class="mx-auto mt-8 max-w-5xl">
+      <KanbanBoard />
     </div>
   </main>
 </template>
