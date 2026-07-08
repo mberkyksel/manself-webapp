@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/errorHandler.js';
+import taskRoutes from './routes/task.routes.js';
 
 const app = express();
 
@@ -13,7 +14,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// TODO: mount task.routes.js and calendar.routes.js here once implemented
+app.use('/api/tasks', taskRoutes);
+
+// TODO: mount calendar.routes.js here once implemented
 
 app.use(errorHandler);
 
