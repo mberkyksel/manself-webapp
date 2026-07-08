@@ -11,7 +11,7 @@ A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google 
 ## Prerequisites
 
 - Node.js 20+ and npm
-- A running PostgreSQL instance
+- A running PostgreSQL instance (via Docker Compose, or a local install)
 
 ## Setup
 
@@ -21,20 +21,30 @@ A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google 
    cp .env.example backend/.env
    ```
 
-   At minimum, set `DATABASE_URL` to point at your local Postgres instance and create that database:
+   At minimum, set `DATABASE_URL` to point at your Postgres instance.
+
+2. Start Postgres. Easiest via Docker Compose:
+
+   ```bash
+   docker compose up -d postgres
+   ```
+
+   This starts Postgres 16 on `localhost:5432` with a persisted `postgres_data` volume, using the `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` values from `.env.example` (defaults: `postgres` / `postgres` / `manself_dev`) unless overridden by a root-level `.env`.
+
+   Without Docker, create the database manually instead:
 
    ```bash
    createdb manself_dev
    ```
 
-2. Install dependencies for both apps:
+3. Install dependencies for both apps:
 
    ```bash
    cd backend && npm install
    cd ../frontend && npm install
    ```
 
-3. Run migrations:
+4. Run migrations:
 
    ```bash
    cd backend
@@ -93,4 +103,4 @@ Skeleton stage: Express server, Postgres schema/migrations, and Vue app shell ar
 
 ## Docker
 
-Not set up yet. `frontend/` and `backend/` are structured so each can get its own `Dockerfile` later without restructuring; `docker-compose.yml` at the repo root is a placeholder for that stage.
+`docker-compose.yml` currently runs Postgres only (`docker compose up -d postgres`), for local development. `frontend/` and `backend/` are structured so each can get its own `Dockerfile` and be added as services later without restructuring.
