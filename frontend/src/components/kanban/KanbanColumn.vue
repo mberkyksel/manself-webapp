@@ -13,11 +13,11 @@ const taskStore = useTaskStore();
 const newTitle = ref('');
 
 function onDragStart(task) {
-  taskStore.draggingTaskId = task.id;
+  taskStore.startDragging(task.id);
 }
 
 function onDragEnd() {
-  taskStore.draggingTaskId = null;
+  taskStore.stopDragging();
 }
 
 // Dropping directly on a card inserts the dragged task just before it.
