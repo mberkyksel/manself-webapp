@@ -1,8 +1,43 @@
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useUserStore } from '../stores/userStore.js';
+
+const userStore = useUserStore();
+const router = useRouter();
+
+const email = ref('');
+const password = ref('');
+
+async function onSubmit() {
+  const success = await userStore.login({ email: email.value, password: password.value });
+  if (success) {
+    router.push({ name: 'dashboard' });
+  }
+}
+</script>
+
 <template>
   <main class="login-view">
     <div class="login-view__panel">
-      <h1 class="login-view__title">Login</h1>
-      <p class="login-view__subtitle">Authentication is not implemented yet.</p>
+      <h1 class="login-view__title">Log in</h1>
+      <p class="login-view__subtitle">Welcome back.</p>
+
+      <form class="login-view__form" @submit.prevent="onSubmit">
+        <input v-model="email" type="email" placeholder="Email" required class="login-view__input" />
+        <input v-model="password" type="password" placeholder="Password" required class="login-view__input" />
+
+        <p v-if="userStore.error" class="login-view__error">{{ userStore.error }}</p>
+
+        <button type="submit" class="login-view__submit" :disabled="userStore.loading">
+          {{ userStore.loading ? 'Logging in...' : 'Log in' }}
+        </button>
+      </form>
+
+      <p class="login-view__footer">
+        Don't have an account?
+        <router-link to="/register" class="login-view__link">Register</router-link>
+      </p>
     </div>
   </main>
 </template>
@@ -12,12 +47,30 @@
   @apply flex min-h-screen items-center justify-center bg-slate-100;
 }
 .login-view__panel {
-  @apply text-center;
+  @apply w-full max-w-sm text-center;
 }
 .login-view__title {
   @apply text-2xl font-semibold text-slate-800;
 }
 .login-view__subtitle {
   @apply mt-2 text-slate-500;
+}
+.login-view__form {
+  @apply mt-6 flex flex-col gap-3 text-left;
+}
+.login-view__input {
+  @apply w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none;
+}
+.login-view__error {
+  @apply rounded-lg bg-rose-50 p-2 text-sm text-rose-600;
+}
+.login-view__submit {
+  @apply rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50;
+}
+.login-view__footer {
+  @apply mt-4 text-sm text-slate-500;
+}
+.login-view__link {
+  @apply font-medium text-slate-700 hover:underline;
 }
 </style>
