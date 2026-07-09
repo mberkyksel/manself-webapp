@@ -1,5 +1,6 @@
 <script setup>
 import WelcomeBanner from '../components/dashboard/WelcomeBanner.vue';
+import WeatherWidget from '../components/dashboard/WeatherWidget.vue';
 import ClockWidget from '../components/dashboard/ClockWidget.vue';
 import CalendarView from '../components/calendar/CalendarView.vue';
 import KanbanBoard from '../components/kanban/KanbanBoard.vue';
@@ -11,8 +12,9 @@ import KanbanBoard from '../components/kanban/KanbanBoard.vue';
       <CalendarView />
     </div>
 
-    <div class="mx-auto mt-8 flex max-w-4xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+    <div class="mx-auto mt-8 flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
       <WelcomeBanner />
+      <WeatherWidget />
       <ClockWidget />
     </div>
 
