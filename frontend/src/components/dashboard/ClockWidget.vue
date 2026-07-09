@@ -38,8 +38,20 @@ const formattedDate = computed(() => dateFormatter.value.format(now.value));
 </script>
 
 <template>
-  <div class="rounded-xl bg-white p-6 shadow-sm">
-    <p class="text-4xl font-semibold tabular-nums text-slate-800">{{ formattedTime }}</p>
-    <p class="mt-1 text-sm text-slate-500">{{ formattedDate }}</p>
+  <div class="clock-widget">
+    <p class="clock-widget__time">{{ formattedTime }}</p>
+    <p class="clock-widget__date">{{ formattedDate }}</p>
   </div>
 </template>
+
+<style scoped>
+.clock-widget {
+  @apply card bg-white p-6;
+}
+.clock-widget__time {
+  @apply text-4xl font-semibold tabular-nums text-slate-800;
+}
+.clock-widget__date {
+  @apply mt-1 text-sm text-slate-500;
+}
+</style>

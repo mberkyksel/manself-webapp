@@ -7,19 +7,34 @@ import KanbanBoard from '../components/kanban/KanbanBoard.vue';
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-100 px-6 py-8">
-    <div class="mx-auto max-w-5xl">
+  <main class="dashboard-view">
+    <div class="dashboard-view__calendar">
       <CalendarView />
     </div>
 
-    <div class="mx-auto mt-8 flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+    <div class="dashboard-view__widgets">
       <WelcomeBanner />
       <WeatherWidget />
       <ClockWidget />
     </div>
 
-    <div class="mx-auto mt-8 max-w-5xl">
+    <div class="dashboard-view__board">
       <KanbanBoard />
     </div>
   </main>
 </template>
+
+<style scoped>
+.dashboard-view {
+  @apply min-h-screen bg-slate-100 px-6 py-8;
+}
+.dashboard-view__calendar {
+  @apply mx-auto max-w-5xl;
+}
+.dashboard-view__widgets {
+  @apply mx-auto mt-8 flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between;
+}
+.dashboard-view__board {
+  @apply mx-auto mt-8 max-w-5xl;
+}
+</style>

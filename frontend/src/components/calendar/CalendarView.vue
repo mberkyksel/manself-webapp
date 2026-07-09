@@ -134,38 +134,28 @@ async function removeEvent(id) {
 </script>
 
 <template>
-  <div class="rounded-xl bg-white p-4 shadow-sm">
-    <div class="mb-3 flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-slate-600">
+  <div class="calendar-view">
+    <div class="calendar-view__header">
+      <h2 class="calendar-view__title">
         {{ isExpanded ? monthLabel : 'Next 15 days' }}
       </h2>
 
-      <div class="flex items-center gap-1">
+      <div class="calendar-view__nav">
         <template v-if="isExpanded">
-          <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="goToday">
-            Today
-          </button>
-          <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="prevMonth">
-            &lsaquo;
-          </button>
-          <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="nextMonth">
-            &rsaquo;
-          </button>
+          <button type="button" class="calendar-view__nav-btn" @click="goToday">Today</button>
+          <button type="button" class="calendar-view__nav-btn" @click="prevMonth">&lsaquo;</button>
+          <button type="button" class="calendar-view__nav-btn" @click="nextMonth">&rsaquo;</button>
         </template>
-        <button
-          type="button"
-          class="rounded px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
-          @click="toggleExpanded"
-        >
+        <button type="button" class="calendar-view__nav-btn calendar-view__nav-btn--toggle" @click="toggleExpanded">
           {{ isExpanded ? 'Collapse ▲' : 'Full month ▾' }}
         </button>
       </div>
     </div>
 
-    <p v-if="error" class="mb-3 rounded-lg bg-rose-50 p-2 text-xs text-rose-600">{{ error }}</p>
+    <p v-if="error" class="calendar-view__error">{{ error }}</p>
 
     <!-- Collapsed: compact 15-day list -->
-    <div v-if="!isExpanded" class="grid grid-cols-3 gap-2 sm:grid-cols-5">
+    <div v-if="!isExpanded" class="calendar-view__compact-grid">
       <CalendarDayCell
         v-for="date in next15Days"
         :key="dateKey(date)"
@@ -173,7 +163,7 @@ async function removeEvent(id) {
         :events="eventsFor(date)"
         :is-today="isToday(date)"
         compact
-        class="rounded-lg border border-slate-100"
+        class="calendar-view__compact-cell"
         @add-event="addEvent"
         @remove-event="removeEvent"
       />
@@ -181,13 +171,11 @@ async function removeEvent(id) {
 
     <!-- Expanded: full month grid -->
     <template v-else>
-      <div
-        class="grid grid-cols-7 gap-px overflow-hidden rounded-t-lg bg-slate-200 text-center text-[11px] font-medium text-slate-500"
-      >
-        <div v-for="label in dayLabels" :key="label" class="bg-slate-50 py-1">{{ label }}</div>
+      <div class="calendar-view__weekday-row">
+        <div v-for="label in dayLabels" :key="label" class="calendar-view__weekday">{{ label }}</div>
       </div>
 
-      <div class="grid grid-cols-7 gap-px overflow-hidden rounded-b-lg bg-slate-200">
+      <div class="calendar-view__month-grid">
         <CalendarDayCell
           v-for="cell in monthCells"
           :key="dateKey(cell.date)"
@@ -202,3 +190,42 @@ async function removeEvent(id) {
     </template>
   </div>
 </template>
+
+<style scoped>
+.calendar-view {
+  @apply card bg-white p-4;
+}
+.calendar-view__header {
+  @apply mb-3 flex items-center justify-between;
+}
+.calendar-view__title {
+  @apply text-sm font-semibold text-slate-600;
+}
+.calendar-view__nav {
+  @apply flex items-center gap-1;
+}
+.calendar-view__nav-btn {
+  @apply rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100;
+}
+.calendar-view__nav-btn--toggle {
+  @apply font-medium;
+}
+.calendar-view__error {
+  @apply mb-3 rounded-lg bg-rose-50 p-2 text-xs text-rose-600;
+}
+.calendar-view__compact-grid {
+  @apply grid grid-cols-3 gap-2 sm:grid-cols-5;
+}
+.calendar-view__compact-cell {
+  @apply rounded-lg border border-slate-100;
+}
+.calendar-view__weekday-row {
+  @apply grid grid-cols-7 gap-px overflow-hidden rounded-t-lg bg-slate-200 text-center text-[11px] font-medium text-slate-500;
+}
+.calendar-view__weekday {
+  @apply bg-slate-50 py-1;
+}
+.calendar-view__month-grid {
+  @apply grid grid-cols-7 gap-px overflow-hidden rounded-b-lg bg-slate-200;
+}
+</style>

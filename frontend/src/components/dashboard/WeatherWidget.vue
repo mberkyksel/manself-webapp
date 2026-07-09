@@ -34,21 +34,21 @@ const gradientClass = computed(() => GRADIENTS[weather.value?.icon] || 'from-sky
 </script>
 
 <template>
-  <div class="w-60 overflow-hidden rounded-xl shadow-sm">
-    <div v-if="loading" class="bg-white p-4 text-sm text-slate-400">Loading weather...</div>
-    <div v-else-if="error" class="bg-white p-4 text-sm text-rose-500">{{ error }}</div>
+  <div class="card weather-card">
+    <div v-if="loading" class="card-status text-slate-400">Loading weather...</div>
+    <div v-else-if="error" class="card-status text-rose-500">{{ error }}</div>
 
-    <div v-else-if="weather" :class="['bg-gradient-to-br p-4 text-white', gradientClass]">
-      <div class="flex items-start justify-between">
+    <div v-else-if="weather" :class="['weather-card__body', gradientClass]">
+      <div class="weather-card__header">
         <div>
-          <p class="text-sm font-medium">{{ weather.location }}</p>
-          <p class="text-4xl font-semibold leading-tight">{{ weather.temperature }}&deg;</p>
-          <p class="text-xs capitalize text-white/80">{{ weather.description }}</p>
+          <p class="weather-card__location">{{ weather.location }}</p>
+          <p class="weather-card__temp">{{ weather.temperature }}&deg;</p>
+          <p class="weather-card__description">{{ weather.description }}</p>
         </div>
         <WeatherIcon :icon="weather.icon" :size="64" color="#ffffff" />
       </div>
 
-      <div class="mt-4 flex items-center gap-3 border-t border-white/20 pt-2 text-[11px] text-white/80">
+      <div class="weather-card__details">
         <span>Feels {{ weather.feelsLike }}&deg;</span>
         <span>{{ weather.humidity }}% humidity</span>
         <span>{{ weather.windSpeed }} m/s</span>
@@ -56,3 +56,27 @@ const gradientClass = computed(() => GRADIENTS[weather.value?.icon] || 'from-sky
     </div>
   </div>
 </template>
+
+<style scoped>
+.weather-card {
+  @apply w-60;
+}
+.weather-card__body {
+  @apply bg-gradient-to-br p-4 text-white;
+}
+.weather-card__header {
+  @apply flex items-start justify-between;
+}
+.weather-card__location {
+  @apply text-sm font-medium;
+}
+.weather-card__temp {
+  @apply text-4xl font-semibold leading-tight;
+}
+.weather-card__description {
+  @apply text-xs capitalize text-white/80;
+}
+.weather-card__details {
+  @apply mt-4 flex items-center gap-3 border-t border-white/20 pt-2 text-[11px] text-white/80;
+}
+</style>

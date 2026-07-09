@@ -13,10 +13,18 @@ const greeting = computed(() => {
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-semibold text-slate-800">{{ greeting }}, {{ userStore.name }}</h1>
-    <p class="mt-1 text-slate-500">Here's what's happening today. ere's what's happening today</p>
-    <p class="mt-1 text-slate-500">Here's what's happening today.</p>
-    
+  <div class="welcome-banner">
+    <h1 class="welcome-banner__title">{{ greeting }}, {{ userStore.name }}</h1>
+    <p class="welcome-banner__subtitle">Here's what's happening today. ere's what's happening today</p>
+    <p class="welcome-banner__subtitle">Here's what's happening today.</p>
   </div>
 </template>
+
+<style scoped>
+.welcome-banner__title {
+  @apply text-2xl font-semibold text-slate-800;
+}
+.welcome-banner__subtitle {
+  @apply mt-1 text-slate-500;
+}
+</style>

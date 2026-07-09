@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Shared primitives reused across multiple components (cards, buttons,
+ * etc). Anything specific to a single component belongs in that
+ * component's own <style scoped> block instead, via @apply.
+ */
+@layer components {
+  .card {
+    @apply overflow-hidden rounded-xl shadow-sm;
+  }
+
+  .card-status {
+    @apply bg-white p-4 text-sm;
+  }
+}
