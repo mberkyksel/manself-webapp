@@ -17,6 +17,14 @@ export const useTaskStore = defineStore('task', {
   },
 
   actions: {
+    startDragging(taskId) {
+      this.draggingTaskId = taskId;
+    },
+
+    stopDragging() {
+      this.draggingTaskId = null;
+    },
+
     async fetchTasks() {
       this.loading = true;
       this.error = null;
