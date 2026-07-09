@@ -18,11 +18,11 @@ onMounted(() => {
 
 <template>
   <div>
-    <div v-if="taskStore.error" class="mb-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+    <div v-if="taskStore.error" class="kanban-board__error">
       {{ taskStore.error }}
     </div>
 
-    <div class="flex gap-4 overflow-x-auto pb-2">
+    <div class="kanban-board__columns">
       <KanbanColumn
         v-for="column in columns"
         :key="column.status"
@@ -33,3 +33,12 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.kanban-board__error {
+  @apply mb-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-600;
+}
+.kanban-board__columns {
+  @apply flex gap-4 overflow-x-auto pb-2;
+}
+</style>

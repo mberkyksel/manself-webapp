@@ -63,79 +63,106 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
 
 <template>
   <div
-    :class="[
-      'flex flex-col bg-white p-1 text-left align-top',
-      compact ? 'min-h-28' : 'min-h-24',
-      outside && 'bg-slate-50',
-    ]"
+    :class="['calendar-day-cell', compact && 'calendar-day-cell--compact', outside && 'calendar-day-cell--outside']"
   >
-    <div class="flex items-center justify-between">
+    <div class="calendar-day-cell__header">
       <span
         :class="[
-          'inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px]',
-          isToday ? 'bg-slate-800 text-white' : outside ? 'text-slate-300' : 'text-slate-600',
+          'calendar-day-cell__badge',
+          isToday ? 'calendar-day-cell__badge--today' : outside ? 'calendar-day-cell__badge--outside' : '',
         ]"
       >
         {{ date.getDate() }}
       </span>
-      <span v-if="compact" class="text-[10px] text-slate-400">{{ weekdayLabel }}</span>
+      <span v-if="compact" class="calendar-day-cell__weekday">{{ weekdayLabel }}</span>
     </div>
 
-    <div class="mt-1 flex flex-col gap-0.5">
+    <div class="calendar-day-cell__events">
       <button
         v-for="event in events"
         :key="event.id"
         type="button"
         title="Click to remove"
-        class="truncate rounded bg-indigo-100 px-1 py-0.5 text-left text-[10px] text-indigo-700 hover:bg-rose-100 hover:text-rose-700"
+        class="calendar-day-cell__event"
         @click="emit('remove-event', event.id)"
       >
         {{ event.allDay ? event.title : `${formatTime(event.startTime)} ${event.title}` }}
       </button>
     </div>
 
-    <button v-if="!isOpen" type="button" class="mt-1 text-[10px] text-slate-300 hover:text-slate-500" @click="openForm">
-      + Add
-    </button>
+    <button v-if="!isOpen" type="button" class="calendar-day-cell__add-trigger" @click="openForm">+ Add</button>
 
-    <form v-else class="mt-1 flex flex-col gap-1" @submit.prevent="submit">
-      <input
-        v-model="form.title"
-        type="text"
-        placeholder="Title"
-        class="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px]"
-      />
-      <label class="flex items-center gap-1 text-[10px] text-slate-500">
+    <form v-else class="calendar-day-cell__form" @submit.prevent="submit">
+      <input v-model="form.title" type="text" placeholder="Title" class="calendar-day-cell__input" />
+      <label class="calendar-day-cell__checkbox-label">
         <input v-model="form.allDay" type="checkbox" />
         All day
       </label>
-      <div v-if="!form.allDay" class="flex gap-1">
-        <input
-          v-model="form.startTime"
-          type="time"
-          class="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px]"
-        />
-        <input
-          v-model="form.endTime"
-          type="time"
-          class="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px]"
-        />
+      <div v-if="!form.allDay" class="calendar-day-cell__time-row">
+        <input v-model="form.startTime" type="time" class="calendar-day-cell__input" />
+        <input v-model="form.endTime" type="time" class="calendar-day-cell__input" />
       </div>
-      <div class="flex gap-1">
-        <button
-          type="submit"
-          class="flex-1 rounded bg-slate-800 py-0.5 text-[10px] font-medium text-white hover:bg-slate-700"
-        >
-          Add
-        </button>
-        <button
-          type="button"
-          class="flex-1 rounded border border-slate-200 py-0.5 text-[10px] text-slate-500"
-          @click="closeForm"
-        >
-          Cancel
-        </button>
+      <div class="calendar-day-cell__actions">
+        <button type="submit" class="calendar-day-cell__submit">Add</button>
+        <button type="button" class="calendar-day-cell__cancel" @click="closeForm">Cancel</button>
       </div>
     </form>
   </div>
 </template>
+
+<style scoped>
+.calendar-day-cell {
+  @apply flex min-h-24 flex-col bg-white p-1 text-left align-top;
+}
+.calendar-day-cell--compact {
+  @apply min-h-28;
+}
+.calendar-day-cell--outside {
+  @apply bg-slate-50;
+}
+.calendar-day-cell__header {
+  @apply flex items-center justify-between;
+}
+.calendar-day-cell__badge {
+  @apply inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] text-slate-600;
+}
+.calendar-day-cell__badge--today {
+  @apply bg-slate-800 text-white;
+}
+.calendar-day-cell__badge--outside {
+  @apply text-slate-300;
+}
+.calendar-day-cell__weekday {
+  @apply text-[10px] text-slate-400;
+}
+.calendar-day-cell__events {
+  @apply mt-1 flex flex-col gap-0.5;
+}
+.calendar-day-cell__event {
+  @apply truncate rounded bg-indigo-100 px-1 py-0.5 text-left text-[10px] text-indigo-700 hover:bg-rose-100 hover:text-rose-700;
+}
+.calendar-day-cell__add-trigger {
+  @apply mt-1 text-[10px] text-slate-300 hover:text-slate-500;
+}
+.calendar-day-cell__form {
+  @apply mt-1 flex flex-col gap-1;
+}
+.calendar-day-cell__input {
+  @apply w-full rounded border border-slate-200 px-1 py-0.5 text-[10px];
+}
+.calendar-day-cell__checkbox-label {
+  @apply flex items-center gap-1 text-[10px] text-slate-500;
+}
+.calendar-day-cell__time-row {
+  @apply flex gap-1;
+}
+.calendar-day-cell__actions {
+  @apply flex gap-1;
+}
+.calendar-day-cell__submit {
+  @apply flex-1 rounded bg-slate-800 py-0.5 text-[10px] font-medium text-white hover:bg-slate-700;
+}
+.calendar-day-cell__cancel {
+  @apply flex-1 rounded border border-slate-200 py-0.5 text-[10px] text-slate-500;
+}
+</style>
