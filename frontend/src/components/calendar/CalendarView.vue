@@ -1,14 +1,17 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import CalendarDayCell from './CalendarDayCell.vue';
 import { calendarService } from '../../services/calendarService.js';
 
 const today = new Date();
 const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), 1));
 
+// Single source of truth for the collapsed/expanded toggle. Collapsed shows
+// a compact 15-day horizon; expanded shows the full month grid for viewDate.
+const isExpanded = ref(false);
+
 const events = ref([]);
 const error = ref(null);
-const openDayKey = ref(null);
-const form = ref({ title: '', startTime: '09:00', endTime: '10:00', allDay: false });
 
 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -29,7 +32,19 @@ function isToday(date) {
   return dateKey(date) === dateKey(today);
 }
 
-const weeks = computed(() => {
+// Collapsed default: today plus the next 14 days (a half-month/bi-weekly
+// horizon), independent of calendar-month boundaries.
+const next15Days = computed(() => {
+  const days = [];
+  for (let i = 0; i < 15; i++) {
+    days.push(new Date(today.getFullYear(), today.getMonth(), today.getDate() + i));
+  }
+  return days;
+});
+
+// Expanded: the full month grid for viewDate, padded with the leading/
+// trailing days needed to fill out the first and last weeks.
+const monthCells = computed(() => {
   const year = viewDate.value.getFullYear();
   const month = viewDate.value.getMonth();
   const firstOfMonth = new Date(year, month, 1);
@@ -49,11 +64,7 @@ const weeks = computed(() => {
     cells.push({ date: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1), outside: true });
   }
 
-  const result = [];
-  for (let i = 0; i < cells.length; i += 7) {
-    result.push(cells.slice(i, i + 7));
-  }
-  return result;
+  return cells;
 });
 
 const eventsByDay = computed(() => {
@@ -68,8 +79,8 @@ const eventsByDay = computed(() => {
   return map;
 });
 
-function formatTime(iso) {
-  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+function eventsFor(date) {
+  return eventsByDay.value[dateKey(date)] || [];
 }
 
 function prevMonth() {
@@ -80,6 +91,13 @@ function nextMonth() {
 }
 function goToday() {
   viewDate.value = new Date(today.getFullYear(), today.getMonth(), 1);
+}
+
+function toggleExpanded() {
+  if (!isExpanded.value) {
+    viewDate.value = new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+  isExpanded.value = !isExpanded.value;
 }
 
 async function fetchEvents() {
@@ -93,46 +111,10 @@ async function fetchEvents() {
 
 onMounted(fetchEvents);
 
-function openForm(day) {
-  openDayKey.value = dateKey(day.date);
-  form.value = { title: '', startTime: '09:00', endTime: '10:00', allDay: false };
-}
-function closeForm() {
-  openDayKey.value = null;
-}
-
-// Build unambiguous UTC instants from the clicked day's local Y/M/D plus the
-// entered local time-of-day, so storage/display stay correct regardless of
-// which timezone the backend process happens to run in.
-async function submitForm(day) {
-  const title = form.value.title.trim();
-  if (!title) return;
-
-  const y = day.date.getFullYear();
-  const m = day.date.getMonth();
-  const d = day.date.getDate();
-
-  let startDate;
-  let endDate;
-  if (form.value.allDay) {
-    startDate = new Date(y, m, d, 0, 0, 0);
-    endDate = new Date(y, m, d, 23, 59, 59);
-  } else {
-    const [startH, startM] = form.value.startTime.split(':').map(Number);
-    const [endH, endM] = form.value.endTime.split(':').map(Number);
-    startDate = new Date(y, m, d, startH, startM);
-    endDate = new Date(y, m, d, endH, endM);
-  }
-
+async function addEvent(payload) {
   try {
-    const event = await calendarService.create({
-      title,
-      startTime: startDate.toISOString(),
-      endTime: endDate.toISOString(),
-      allDay: form.value.allDay,
-    });
+    const event = await calendarService.create(payload);
     events.value.push(event);
-    closeForm();
   } catch (err) {
     error.value = 'Could not create event.';
     console.error(err);
@@ -154,105 +136,69 @@ async function removeEvent(id) {
 <template>
   <div class="rounded-xl bg-white p-4 shadow-sm">
     <div class="mb-3 flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-slate-600">{{ monthLabel }}</h2>
+      <h2 class="text-sm font-semibold text-slate-600">
+        {{ isExpanded ? monthLabel : 'Next 15 days' }}
+      </h2>
+
       <div class="flex items-center gap-1">
-        <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="goToday">
-          Today
-        </button>
-        <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="prevMonth">
-          &lsaquo;
-        </button>
-        <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="nextMonth">
-          &rsaquo;
+        <template v-if="isExpanded">
+          <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="goToday">
+            Today
+          </button>
+          <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="prevMonth">
+            &lsaquo;
+          </button>
+          <button type="button" class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" @click="nextMonth">
+            &rsaquo;
+          </button>
+        </template>
+        <button
+          type="button"
+          class="rounded px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
+          @click="toggleExpanded"
+        >
+          {{ isExpanded ? 'Collapse ▲' : 'Full month ▾' }}
         </button>
       </div>
     </div>
 
     <p v-if="error" class="mb-3 rounded-lg bg-rose-50 p-2 text-xs text-rose-600">{{ error }}</p>
 
-    <div class="grid grid-cols-7 gap-px overflow-hidden rounded-t-lg bg-slate-200 text-center text-[11px] font-medium text-slate-500">
-      <div v-for="label in dayLabels" :key="label" class="bg-slate-50 py-1">{{ label }}</div>
+    <!-- Collapsed: compact 15-day list -->
+    <div v-if="!isExpanded" class="grid grid-cols-3 gap-2 sm:grid-cols-5">
+      <CalendarDayCell
+        v-for="date in next15Days"
+        :key="dateKey(date)"
+        :date="date"
+        :events="eventsFor(date)"
+        :is-today="isToday(date)"
+        compact
+        class="rounded-lg border border-slate-100"
+        @add-event="addEvent"
+        @remove-event="removeEvent"
+      />
     </div>
 
-    <div class="grid grid-cols-7 gap-px overflow-hidden rounded-b-lg bg-slate-200">
-      <template v-for="week in weeks" :key="dateKey(week[0].date)">
-        <div
-          v-for="day in week"
-          :key="dateKey(day.date)"
-          :class="['min-h-24 bg-white p-1 text-left align-top', day.outside && 'bg-slate-50']"
-        >
-          <span
-            :class="[
-              'inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px]',
-              isToday(day.date) ? 'bg-slate-800 text-white' : day.outside ? 'text-slate-300' : 'text-slate-600',
-            ]"
-          >
-            {{ day.date.getDate() }}
-          </span>
+    <!-- Expanded: full month grid -->
+    <template v-else>
+      <div
+        class="grid grid-cols-7 gap-px overflow-hidden rounded-t-lg bg-slate-200 text-center text-[11px] font-medium text-slate-500"
+      >
+        <div v-for="label in dayLabels" :key="label" class="bg-slate-50 py-1">{{ label }}</div>
+      </div>
 
-          <div class="mt-1 flex flex-col gap-0.5">
-            <button
-              v-for="event in eventsByDay[dateKey(day.date)] || []"
-              :key="event.id"
-              type="button"
-              title="Click to remove"
-              class="truncate rounded bg-indigo-100 px-1 py-0.5 text-left text-[10px] text-indigo-700 hover:bg-rose-100 hover:text-rose-700"
-              @click="removeEvent(event.id)"
-            >
-              {{ event.allDay ? event.title : `${formatTime(event.startTime)} ${event.title}` }}
-            </button>
-          </div>
-
-          <button
-            v-if="openDayKey !== dateKey(day.date)"
-            type="button"
-            class="mt-1 text-[10px] text-slate-300 hover:text-slate-500"
-            @click="openForm(day)"
-          >
-            + Add
-          </button>
-
-          <form v-else class="mt-1 flex flex-col gap-1" @submit.prevent="submitForm(day)">
-            <input
-              v-model="form.title"
-              type="text"
-              placeholder="Title"
-              class="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px]"
-            />
-            <label class="flex items-center gap-1 text-[10px] text-slate-500">
-              <input v-model="form.allDay" type="checkbox" />
-              All day
-            </label>
-            <div v-if="!form.allDay" class="flex gap-1">
-              <input
-                v-model="form.startTime"
-                type="time"
-                class="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px]"
-              />
-              <input
-                v-model="form.endTime"
-                type="time"
-                class="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px]"
-              />
-            </div>
-            <div class="flex gap-1">
-              <button
-                type="submit"
-                class="flex-1 rounded bg-slate-800 py-0.5 text-[10px] font-medium text-white hover:bg-slate-700"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                class="flex-1 rounded border border-slate-200 py-0.5 text-[10px] text-slate-500"
-                @click="closeForm"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      </template>
-    </div>
+      <div class="grid grid-cols-7 gap-px overflow-hidden rounded-b-lg bg-slate-200">
+        <CalendarDayCell
+          v-for="cell in monthCells"
+          :key="dateKey(cell.date)"
+          :date="cell.date"
+          :events="eventsFor(cell.date)"
+          :is-today="isToday(cell.date)"
+          :outside="cell.outside"
+          @add-event="addEvent"
+          @remove-event="removeEvent"
+        />
+      </div>
+    </template>
   </div>
 </template>

@@ -7,13 +7,13 @@ import KanbanBoard from '../components/kanban/KanbanBoard.vue';
 
 <template>
   <main class="min-h-screen bg-slate-100 px-6 py-8">
-    <div class="mx-auto flex max-w-4xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-      <WelcomeBanner />
-      <ClockWidget />
+    <div class="mx-auto max-w-5xl">
+      <CalendarView />
     </div>
 
-    <div class="mx-auto mt-8 max-w-5xl">
-      <CalendarView />
+    <div class="mx-auto mt-8 flex max-w-4xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+      <WelcomeBanner />
+      <ClockWidget />
     </div>
 
     <div class="mx-auto mt-8 max-w-5xl">
