@@ -1,20 +1,16 @@
 import { Task, Board } from '../models/index.js';
-import { getDefaultUser } from '../services/demoUser.service.js';
 
-async function getDefaultBoard() {
-  const user = await getDefaultUser();
-
+async function getOrCreateBoard(userId) {
   const [board] = await Board.findOrCreate({
-    where: { userId: user.id },
+    where: { userId },
     defaults: { name: 'My Board' },
   });
-
   return board;
 }
 
 export async function listTasks(req, res, next) {
   try {
-    const board = await getDefaultBoard();
+    const board = await getOrCreateBoard(req.user.id);
     const tasks = await Task.findAll({
       where: { boardId: board.id },
       order: [['position', 'ASC']],
@@ -27,7 +23,7 @@ export async function listTasks(req, res, next) {
 
 export async function createTask(req, res, next) {
   try {
-    const board = await getDefaultBoard();
+    const board = await getOrCreateBoard(req.user.id);
     const { title, description, status, priority, dueDate } = req.body;
 
     if (!title || !title.trim()) {
@@ -43,7 +39,7 @@ export async function createTask(req, res, next) {
 
     const task = await Task.create({
       boardId: board.id,
-      userId: board.userId,
+      userId: req.user.id,
       title: title.trim(),
       description,
       status: targetStatus,
@@ -60,7 +56,10 @@ export async function createTask(req, res, next) {
 
 export async function updateTask(req, res, next) {
   try {
-    const task = await Task.findByPk(req.params.id);
+    const board = await getOrCreateBoard(req.user.id);
+    // Scoped to the caller's own board so one user can't edit another
+    // user's task by guessing/iterating ids.
+    const task = await Task.findOne({ where: { id: req.params.id, boardId: board.id } });
     if (!task) {
       return res.status(404).json({ error: { message: 'Task not found' } });
     }
@@ -83,7 +82,8 @@ export async function updateTask(req, res, next) {
 
 export async function deleteTask(req, res, next) {
   try {
-    const task = await Task.findByPk(req.params.id);
+    const board = await getOrCreateBoard(req.user.id);
+    const task = await Task.findOne({ where: { id: req.params.id, boardId: board.id } });
     if (!task) {
       return res.status(404).json({ error: { message: 'Task not found' } });
     }

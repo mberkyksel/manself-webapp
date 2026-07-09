@@ -1,11 +1,9 @@
 import { CalendarEvent } from '../models/index.js';
-import { getDefaultUser } from '../services/demoUser.service.js';
 
 export async function listEvents(req, res, next) {
   try {
-    const user = await getDefaultUser();
     const events = await CalendarEvent.findAll({
-      where: { userId: user.id },
+      where: { userId: req.user.id },
       order: [['startTime', 'ASC']],
     });
     res.json(events);
@@ -16,7 +14,6 @@ export async function listEvents(req, res, next) {
 
 export async function createEvent(req, res, next) {
   try {
-    const user = await getDefaultUser();
     const { title, description, startTime, endTime, allDay, taskId } = req.body;
 
     if (!title || !title.trim()) {
@@ -27,7 +24,7 @@ export async function createEvent(req, res, next) {
     }
 
     const event = await CalendarEvent.create({
-      userId: user.id,
+      userId: req.user.id,
       taskId: taskId || null,
       title: title.trim(),
       description,
@@ -44,7 +41,9 @@ export async function createEvent(req, res, next) {
 
 export async function updateEvent(req, res, next) {
   try {
-    const event = await CalendarEvent.findByPk(req.params.id);
+    // Scoped to the caller's own events so one user can't edit another
+    // user's event by guessing/iterating ids.
+    const event = await CalendarEvent.findOne({ where: { id: req.params.id, userId: req.user.id } });
     if (!event) {
       return res.status(404).json({ error: { message: 'Event not found' } });
     }
@@ -66,7 +65,7 @@ export async function updateEvent(req, res, next) {
 
 export async function deleteEvent(req, res, next) {
   try {
-    const event = await CalendarEvent.findByPk(req.params.id);
+    const event = await CalendarEvent.findOne({ where: { id: req.params.id, userId: req.user.id } });
     if (!event) {
       return res.status(404).json({ error: { message: 'Event not found' } });
     }
