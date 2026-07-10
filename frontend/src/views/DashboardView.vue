@@ -4,6 +4,7 @@ import WeatherWidget from '../components/dashboard/WeatherWidget.vue';
 import ClockWidget from '../components/dashboard/ClockWidget.vue';
 import CalendarView from '../components/calendar/CalendarView.vue';
 import KanbanBoard from '../components/kanban/KanbanBoard.vue';
+import StickyNotesManager from '../components/dashboard/StickyNotesManager.vue';
 </script>
 
 <template>
@@ -21,6 +22,8 @@ import KanbanBoard from '../components/kanban/KanbanBoard.vue';
     <div class="dashboard-view__board">
       <KanbanBoard />
     </div>
+
+    <StickyNotesManager />
   </main>
 </template>
 
