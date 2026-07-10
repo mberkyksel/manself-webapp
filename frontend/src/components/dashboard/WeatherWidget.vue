@@ -34,9 +34,9 @@ const gradientClass = computed(() => GRADIENTS[weather.value?.icon] || 'from-sky
 </script>
 
 <template>
-  <div class="card weather-card">
-    <div v-if="loading" class="card-status text-slate-400">Loading weather...</div>
-    <div v-else-if="error" class="card-status text-rose-500">{{ error }}</div>
+  <div class="weather-card">
+    <div v-if="loading" class="weather-card__status text-slate-400">Loading weather...</div>
+    <div v-else-if="error" class="weather-card__status text-rose-500">{{ error }}</div>
 
     <div v-else-if="weather" :class="['weather-card__body', gradientClass]">
       <div class="weather-card__header">
@@ -59,7 +59,10 @@ const gradientClass = computed(() => GRADIENTS[weather.value?.icon] || 'from-sky
 
 <style scoped>
 .weather-card {
-  @apply w-60;
+  @apply relative z-10 w-60 overflow-hidden rounded-2xl shadow-[0_10px_30px_-10px_rgba(59,130,246,0.55)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-10px_rgba(59,130,246,0.65)] sm:w-[220px] sm:flex-none;
+}
+.weather-card__status {
+  @apply rounded-2xl bg-white p-4 text-sm;
 }
 .weather-card__body {
   @apply bg-gradient-to-br p-4 text-white;

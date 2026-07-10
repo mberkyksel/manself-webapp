@@ -65,6 +65,9 @@ function onLogout() {
 </template>
 
 <style scoped>
+.welcome-banner {
+  @apply relative z-10 flex-1 rounded-2xl border border-white/70 bg-white/60 p-6 shadow-[0_8px_30px_-10px_rgba(30,41,59,0.25)] backdrop-blur-xl backdrop-saturate-150 transition duration-200 hover:-translate-y-0.5 hover:border-indigo-300/60 hover:shadow-[0_14px_34px_-10px_rgba(79,70,229,0.35)] sm:min-w-[260px];
+}
 .welcome-banner__title {
   @apply text-2xl font-semibold text-slate-800;
 }
