@@ -1,4 +1,4 @@
-import { Task, Board } from '../models/index.js';
+import { Task, Board, CalendarEvent } from '../models/index.js';
 
 async function getOrCreateBoard(userId) {
   const [board] = await Board.findOrCreate({
@@ -14,6 +14,13 @@ export async function listTasks(req, res, next) {
     const tasks = await Task.findAll({
       where: { boardId: board.id },
       order: [['position', 'ASC']],
+      include: [
+        {
+          model: CalendarEvent,
+          as: 'calendarEvents',
+          attributes: ['id', 'title', 'startTime', 'endTime', 'allDay'],
+        },
+      ],
     });
     res.json(tasks);
   } catch (err) {

@@ -1,10 +1,11 @@
-import { CalendarEvent } from '../models/index.js';
+import { CalendarEvent, Task } from '../models/index.js';
 
 export async function listEvents(req, res, next) {
   try {
     const events = await CalendarEvent.findAll({
       where: { userId: req.user.id },
       order: [['startTime', 'ASC']],
+      include: [{ model: Task, as: 'task', attributes: ['id', 'title', 'status'] }],
     });
     res.json(events);
   } catch (err) {
@@ -32,6 +33,7 @@ export async function createEvent(req, res, next) {
       endTime,
       allDay: Boolean(allDay),
     });
+    await event.reload({ include: [{ model: Task, as: 'task', attributes: ['id', 'title', 'status'] }] });
 
     res.status(201).json(event);
   } catch (err) {
@@ -48,14 +50,16 @@ export async function updateEvent(req, res, next) {
       return res.status(404).json({ error: { message: 'Event not found' } });
     }
 
-    const { title, description, startTime, endTime, allDay } = req.body;
+    const { title, description, startTime, endTime, allDay, taskId } = req.body;
     await event.update({
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
       ...(startTime !== undefined && { startTime }),
       ...(endTime !== undefined && { endTime }),
       ...(allDay !== undefined && { allDay }),
+      ...(taskId !== undefined && { taskId: taskId || null }),
     });
+    await event.reload({ include: [{ model: Task, as: 'task', attributes: ['id', 'title', 'status'] }] });
 
     res.json(event);
   } catch (err) {

@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from 'vue';
 import CalendarDayCell from './CalendarDayCell.vue';
 import { calendarService } from '../../services/calendarService.js';
+import { useTaskStore } from '../../stores/taskStore.js';
+
+const taskStore = useTaskStore();
 
 const today = new Date();
 const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -110,6 +113,7 @@ async function fetchEvents() {
 }
 
 onMounted(fetchEvents);
+onMounted(taskStore.fetchTasks);
 
 async function addEvent(payload) {
   try {
@@ -117,6 +121,17 @@ async function addEvent(payload) {
     events.value.push(event);
   } catch (err) {
     error.value = 'Could not create event.';
+    console.error(err);
+  }
+}
+
+async function updateEvent(id, payload) {
+  const index = events.value.findIndex((e) => e.id === id);
+  if (index === -1) return;
+  try {
+    events.value[index] = await calendarService.update(id, payload);
+  } catch (err) {
+    error.value = 'Could not update event.';
     console.error(err);
   }
 }
@@ -161,10 +176,12 @@ async function removeEvent(id) {
         :key="dateKey(date)"
         :date="date"
         :events="eventsFor(date)"
+        :tasks="taskStore.tasks"
         :is-today="isToday(date)"
         compact
         class="calendar-view__compact-cell"
         @add-event="addEvent"
+        @update-event="({ id, payload }) => updateEvent(id, payload)"
         @remove-event="removeEvent"
       />
     </div>
@@ -181,9 +198,11 @@ async function removeEvent(id) {
           :key="dateKey(cell.date)"
           :date="cell.date"
           :events="eventsFor(cell.date)"
+          :tasks="taskStore.tasks"
           :is-today="isToday(cell.date)"
           :outside="cell.outside"
           @add-event="addEvent"
+          @update-event="({ id, payload }) => updateEvent(id, payload)"
           @remove-event="removeEvent"
         />
       </div>

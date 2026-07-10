@@ -4,22 +4,48 @@ import { ref, computed } from 'vue';
 const props = defineProps({
   date: { type: Date, required: true },
   events: { type: Array, default: () => [] },
+  tasks: { type: Array, default: () => [] },
   isToday: { type: Boolean, default: false },
   outside: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['add-event', 'remove-event']);
+const emit = defineEmits(['add-event', 'update-event', 'remove-event']);
 
 const isOpen = ref(false);
-const form = ref({ title: '', startTime: '09:00', endTime: '10:00', allDay: false });
+const editingEventId = ref(null);
+const form = ref(emptyForm());
+
+function emptyForm() {
+  return { title: '', startTime: '09:00', endTime: '10:00', allDay: false, taskId: '' };
+}
+
+function toLocalTimeInput(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 function openForm() {
-  form.value = { title: '', startTime: '09:00', endTime: '10:00', allDay: false };
+  form.value = emptyForm();
+  editingEventId.value = null;
   isOpen.value = true;
 }
+
+function openEditForm(event) {
+  form.value = {
+    title: event.title,
+    startTime: toLocalTimeInput(event.startTime),
+    endTime: toLocalTimeInput(event.endTime),
+    allDay: event.allDay,
+    taskId: event.task?.id ?? '',
+  };
+  editingEventId.value = event.id;
+  isOpen.value = true;
+}
+
 function closeForm() {
   isOpen.value = false;
+  editingEventId.value = null;
 }
 
 // Builds a real UTC instant from this cell's local Y/M/D plus the entered
@@ -45,12 +71,19 @@ function submit() {
     endDate = new Date(y, m, d, endH, endM);
   }
 
-  emit('add-event', {
+  const payload = {
     title,
     startTime: startDate.toISOString(),
     endTime: endDate.toISOString(),
     allDay: form.value.allDay,
-  });
+    taskId: form.value.taskId ? Number(form.value.taskId) : null,
+  };
+
+  if (editingEventId.value != null) {
+    emit('update-event', { id: editingEventId.value, payload });
+  } else {
+    emit('add-event', payload);
+  }
   closeForm();
 }
 
@@ -78,22 +111,30 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
     </div>
 
     <div class="calendar-day-cell__events">
-      <button
-        v-for="event in events"
-        :key="event.id"
-        type="button"
-        title="Click to remove"
-        class="calendar-day-cell__event"
-        @click="emit('remove-event', event.id)"
-      >
-        {{ event.allDay ? event.title : `${formatTime(event.startTime)} ${event.title}` }}
-      </button>
+      <div v-for="event in events" :key="event.id" class="calendar-day-cell__event-row">
+        <button type="button" title="Click to edit" class="calendar-day-cell__event" @click="openEditForm(event)">
+          {{ event.allDay ? event.title : `${formatTime(event.startTime)} ${event.title}` }}
+          <span v-if="event.task" class="calendar-day-cell__event-task">🔗 {{ event.task.title }}</span>
+        </button>
+        <button
+          type="button"
+          title="Remove"
+          class="calendar-day-cell__event-remove"
+          @click="emit('remove-event', event.id)"
+        >
+          &times;
+        </button>
+      </div>
     </div>
 
     <button v-if="!isOpen" type="button" class="calendar-day-cell__add-trigger" @click="openForm">+ Add</button>
 
     <form v-else class="calendar-day-cell__form" @submit.prevent="submit">
       <input v-model="form.title" type="text" placeholder="Title" class="calendar-day-cell__input" />
+      <select v-model="form.taskId" class="calendar-day-cell__input">
+        <option value="">No linked task</option>
+        <option v-for="task in tasks" :key="task.id" :value="task.id">{{ task.title }}</option>
+      </select>
       <label class="calendar-day-cell__checkbox-label">
         <input v-model="form.allDay" type="checkbox" />
         All day
@@ -103,7 +144,7 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
         <input v-model="form.endTime" type="time" class="calendar-day-cell__input" />
       </div>
       <div class="calendar-day-cell__actions">
-        <button type="submit" class="calendar-day-cell__submit">Add</button>
+        <button type="submit" class="calendar-day-cell__submit">{{ editingEventId != null ? 'Save' : 'Add' }}</button>
         <button type="button" class="calendar-day-cell__cancel" @click="closeForm">Cancel</button>
       </div>
     </form>
@@ -138,8 +179,17 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
 .calendar-day-cell__events {
   @apply mt-1 flex flex-col gap-0.5;
 }
+.calendar-day-cell__event-row {
+  @apply flex items-center gap-0.5;
+}
 .calendar-day-cell__event {
-  @apply truncate rounded bg-indigo-100 px-1 py-0.5 text-left text-[10px] text-indigo-700 hover:bg-rose-100 hover:text-rose-700;
+  @apply min-w-0 flex-1 truncate rounded bg-indigo-100 px-1 py-0.5 text-left text-[10px] text-indigo-700 hover:bg-indigo-200;
+}
+.calendar-day-cell__event-task {
+  @apply ml-1 text-indigo-500;
+}
+.calendar-day-cell__event-remove {
+  @apply shrink-0 rounded px-1 text-[10px] text-slate-300 hover:bg-rose-100 hover:text-rose-700;
 }
 .calendar-day-cell__add-trigger {
   @apply mt-1 text-[10px] text-slate-300 hover:text-slate-500;

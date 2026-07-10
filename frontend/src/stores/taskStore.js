@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { taskService } from '../services/taskService.js';
+import { calendarService } from '../services/calendarService.js';
 
 export const useTaskStore = defineStore('task', {
   state: () => ({
@@ -38,10 +39,55 @@ export const useTaskStore = defineStore('task', {
       }
     },
 
-    async addTask({ title, status = 'todo', priority = 'medium' }) {
-      const task = await taskService.create({ title, status, priority });
+    async addTask({ title, status = 'todo', priority = 'medium', dueDate = null }) {
+      const task = await taskService.create({ title, status, priority, dueDate });
       this.tasks.push(task);
       return task;
+    },
+
+    async updateTask(id, payload) {
+      const task = this.tasks.find((t) => t.id === id);
+      if (!task) return;
+
+      const previous = { ...task };
+      Object.assign(task, payload);
+
+      try {
+        await taskService.update(id, payload);
+      } catch (err) {
+        Object.assign(task, previous);
+        console.error(err);
+      }
+    },
+
+    // Manual trigger only (never automatic) so editing a due date doesn't
+    // silently spawn/move calendar events behind the user's back. Reuses
+    // the task's existing linked all-day event if there is one, instead of
+    // creating a duplicate each time this is clicked.
+    async syncDueDateToCalendar(taskId) {
+      const task = this.tasks.find((t) => t.id === taskId);
+      if (!task || !task.dueDate) return;
+
+      const [y, m, d] = task.dueDate.split('-').map(Number);
+      const payload = {
+        title: task.title,
+        startTime: new Date(y, m - 1, d, 0, 0, 0).toISOString(),
+        endTime: new Date(y, m - 1, d, 23, 59, 59).toISOString(),
+        allDay: true,
+        taskId: task.id,
+      };
+
+      const existing = (task.calendarEvents || []).find((e) => e.allDay);
+
+      try {
+        const event = existing
+          ? await calendarService.update(existing.id, payload)
+          : await calendarService.create(payload);
+
+        task.calendarEvents = [...(task.calendarEvents || []).filter((e) => e.id !== event.id), event];
+      } catch (err) {
+        console.error(err);
+      }
     },
 
     async removeTask(id) {

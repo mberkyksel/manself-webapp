@@ -11,6 +11,7 @@ const props = defineProps({
 
 const taskStore = useTaskStore();
 const newTitle = ref('');
+const newDueDate = ref('');
 
 function onDragStart(task) {
   taskStore.startDragging(task.id);
@@ -51,8 +52,10 @@ function onDropOnColumn() {
 async function submitNewTask() {
   const title = newTitle.value.trim();
   if (!title) return;
+  const dueDate = newDueDate.value || null;
   newTitle.value = '';
-  await taskStore.addTask({ title, status: props.status });
+  newDueDate.value = '';
+  await taskStore.addTask({ title, status: props.status, dueDate });
 }
 </script>
 
@@ -70,12 +73,15 @@ async function submitNewTask() {
           @dragstart="onDragStart(task)"
           @dragend="onDragEnd"
           @remove="taskStore.removeTask(task.id)"
+          @update-due-date="taskStore.updateTask(task.id, { dueDate: $event })"
+          @sync-due-date="taskStore.syncDueDateToCalendar(task.id)"
         />
       </div>
     </div>
 
     <form class="kanban-column__form" @submit.prevent="submitNewTask">
       <input v-model="newTitle" type="text" placeholder="Add a task..." class="kanban-column__input" />
+      <input v-model="newDueDate" type="date" class="kanban-column__due-input" />
       <button type="submit" class="kanban-column__submit">Add</button>
     </form>
   </div>
@@ -102,6 +108,9 @@ async function submitNewTask() {
 }
 .kanban-column__input {
   @apply min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 focus:border-slate-400 focus:outline-none;
+}
+.kanban-column__due-input {
+  @apply shrink-0 rounded-md border border-slate-200 bg-white px-1 py-1 text-xs text-slate-500 focus:border-slate-400 focus:outline-none;
 }
 .kanban-column__submit {
   @apply shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700;
