@@ -1,10 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import CalendarDayCell from './CalendarDayCell.vue';
-import { calendarService } from '../../services/calendarService.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useCalendarStore } from '../../stores/calendarStore.js';
 
 const taskStore = useTaskStore();
+const calendarStore = useCalendarStore();
 
 const today = new Date();
 const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -12,9 +13,6 @@ const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), 1));
 // Single source of truth for the collapsed/expanded toggle. Collapsed shows
 // a compact 15-day horizon; expanded shows the full month grid for viewDate.
 const isExpanded = ref(false);
-
-const events = ref([]);
-const error = ref(null);
 
 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -72,7 +70,7 @@ const monthCells = computed(() => {
 
 const eventsByDay = computed(() => {
   const map = {};
-  for (const event of events.value) {
+  for (const event of calendarStore.events) {
     const key = dateKey(new Date(event.startTime));
     (map[key] ??= []).push(event);
   }
@@ -103,46 +101,23 @@ function toggleExpanded() {
   isExpanded.value = !isExpanded.value;
 }
 
-async function fetchEvents() {
-  try {
-    events.value = await calendarService.list();
-  } catch (err) {
-    error.value = 'Could not load calendar events. Is the backend running?';
-    console.error(err);
-  }
-}
-
-onMounted(fetchEvents);
+onMounted(calendarStore.fetchEvents);
 onMounted(taskStore.fetchTasks);
 
 async function addEvent(payload) {
   try {
-    const event = await calendarService.create(payload);
-    events.value.push(event);
+    await calendarStore.addEvent(payload);
   } catch (err) {
-    error.value = 'Could not create event.';
+    calendarStore.error = 'Could not create event.';
     console.error(err);
   }
 }
 
 async function updateEvent(id, payload) {
-  const index = events.value.findIndex((e) => e.id === id);
-  if (index === -1) return;
   try {
-    events.value[index] = await calendarService.update(id, payload);
+    await calendarStore.updateEvent(id, payload);
   } catch (err) {
-    error.value = 'Could not update event.';
-    console.error(err);
-  }
-}
-
-async function removeEvent(id) {
-  const previous = events.value;
-  events.value = events.value.filter((e) => e.id !== id);
-  try {
-    await calendarService.remove(id);
-  } catch (err) {
-    events.value = previous;
+    calendarStore.error = 'Could not update event.';
     console.error(err);
   }
 }
@@ -167,7 +142,7 @@ async function removeEvent(id) {
       </div>
     </div>
 
-    <p v-if="error" class="calendar-view__error">{{ error }}</p>
+    <p v-if="calendarStore.error" class="calendar-view__error">{{ calendarStore.error }}</p>
 
     <!-- Collapsed: compact 15-day list -->
     <div v-if="!isExpanded" class="calendar-view__compact-grid">
@@ -182,7 +157,7 @@ async function removeEvent(id) {
         class="calendar-view__compact-cell"
         @add-event="addEvent"
         @update-event="({ id, payload }) => updateEvent(id, payload)"
-        @remove-event="removeEvent"
+        @remove-event="calendarStore.removeEvent"
       />
     </div>
 
@@ -203,7 +178,7 @@ async function removeEvent(id) {
           :outside="cell.outside"
           @add-event="addEvent"
           @update-event="({ id, payload }) => updateEvent(id, payload)"
-          @remove-event="removeEvent"
+          @remove-event="calendarStore.removeEvent"
         />
       </div>
     </template>

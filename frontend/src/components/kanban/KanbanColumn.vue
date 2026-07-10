@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import TaskCard from './TaskCard.vue';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useCalendarStore } from '../../stores/calendarStore.js';
 
 const props = defineProps({
   status: { type: String, required: true },
@@ -10,8 +11,13 @@ const props = defineProps({
 });
 
 const taskStore = useTaskStore();
+const calendarStore = useCalendarStore();
 const newTitle = ref('');
 const newDueDate = ref('');
+
+function eventCountFor(taskId) {
+  return calendarStore.events.filter((event) => event.task?.id === taskId).length;
+}
 
 function onDragStart(task) {
   taskStore.startDragging(task.id);
@@ -70,6 +76,7 @@ async function submitNewTask() {
       <div v-for="task in tasks" :key="task.id" @dragover.prevent @drop.stop="onDropOnCard(task)">
         <TaskCard
           :task="task"
+          :event-count="eventCountFor(task.id)"
           @dragstart="onDragStart(task)"
           @dragend="onDragEnd"
           @remove="taskStore.removeTask(task.id)"

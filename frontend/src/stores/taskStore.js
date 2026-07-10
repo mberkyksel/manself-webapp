@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { taskService } from '../services/taskService.js';
-import { calendarService } from '../services/calendarService.js';
+import { useCalendarStore } from './calendarStore.js';
 
 export const useTaskStore = defineStore('task', {
   state: () => ({
@@ -63,11 +63,14 @@ export const useTaskStore = defineStore('task', {
     // Manual trigger only (never automatic) so editing a due date doesn't
     // silently spawn/move calendar events behind the user's back. Reuses
     // the task's existing linked all-day event if there is one, instead of
-    // creating a duplicate each time this is clicked.
+    // creating a duplicate each time this is clicked. Goes through
+    // calendarStore (shared with CalendarView) so the calendar grid and the
+    // linked-event badge on this task both update immediately.
     async syncDueDateToCalendar(taskId) {
       const task = this.tasks.find((t) => t.id === taskId);
       if (!task || !task.dueDate) return;
 
+      const calendarStore = useCalendarStore();
       const [y, m, d] = task.dueDate.split('-').map(Number);
       const payload = {
         title: task.title,
@@ -77,14 +80,14 @@ export const useTaskStore = defineStore('task', {
         taskId: task.id,
       };
 
-      const existing = (task.calendarEvents || []).find((e) => e.allDay);
+      const existing = calendarStore.events.find((e) => e.allDay && e.task?.id === task.id);
 
       try {
-        const event = existing
-          ? await calendarService.update(existing.id, payload)
-          : await calendarService.create(payload);
-
-        task.calendarEvents = [...(task.calendarEvents || []).filter((e) => e.id !== event.id), event];
+        if (existing) {
+          await calendarStore.updateEvent(existing.id, payload);
+        } else {
+          await calendarStore.addEvent(payload);
+        }
       } catch (err) {
         console.error(err);
       }

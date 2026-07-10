@@ -1,6 +1,7 @@
 <script setup>
 defineProps({
   task: { type: Object, required: true },
+  eventCount: { type: Number, default: 0 },
 });
 
 defineEmits(['dragstart', 'dragend', 'remove', 'update-due-date', 'sync-due-date']);
@@ -16,11 +17,11 @@ defineEmits(['dragstart', 'dragend', 'remove', 'update-due-date', 'sync-due-date
     </div>
 
     <span
-      v-if="task.calendarEvents?.length"
+      v-if="eventCount"
       class="task-card__event-badge"
-      :title="`${task.calendarEvents.length} linked calendar event${task.calendarEvents.length > 1 ? 's' : ''}`"
+      :title="`${eventCount} linked calendar event${eventCount > 1 ? 's' : ''}`"
     >
-      📅 {{ task.calendarEvents.length }}
+      📅 {{ eventCount }}
     </span>
 
     <p v-if="task.description" class="task-card__description">
