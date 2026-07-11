@@ -35,11 +35,11 @@ export const useUserStore = defineStore('user', {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
     },
 
-    async register({ name, email, password }) {
+    async register({ name, email, password, timezone }) {
       this.loading = true;
       this.error = null;
       try {
-        const { token, user } = await authService.register({ name, email, password });
+        const { token, user } = await authService.register({ name, email, password, timezone });
         this.setSession(token, user);
         return true;
       } catch (err) {
