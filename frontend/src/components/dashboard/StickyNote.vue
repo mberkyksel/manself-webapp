@@ -94,7 +94,7 @@ onUnmounted(() => clearTimeout(saveTimer));
 <template>
   <div
     class="sticky-note"
-    :class="[colorClasses[note.color], { 'sticky-note--dragging': dragging }]"
+    :class="{ 'sticky-note--dragging': dragging }"
     :style="{
       left: `${position.x}px`,
       top: `${position.y}px`,
@@ -103,31 +103,47 @@ onUnmounted(() => clearTimeout(saveTimer));
     }"
     @mousedown="onMouseDown"
   >
-    <div class="sticky-note__content">
-      <div class="sticky-note__handle">
-        <div class="sticky-note__swatches">
-          <button
-            v-for="c in COLORS"
-            :key="c.key"
-            type="button"
-            class="sticky-note__swatch"
-            :class="[c.class, note.color === c.key && 'sticky-note__swatch--active']"
-            :aria-label="`Set color ${c.key}`"
-            @click="emit('update-color', c.key)"
-          />
+    <!-- The page's own body. Clipped with a notch matching the fold's
+         footprint - once the corner is genuinely rotated away in 3D
+         (see .sticky-note__fold below), that corner of the page itself
+         has to actually be gone, or its square edge shows past the
+         now-foreshortened flap sitting in front of it. -->
+    <div class="sticky-note__page" :class="colorClasses[note.color]">
+      <div class="sticky-note__content">
+        <div class="sticky-note__handle">
+          <div class="sticky-note__swatches">
+            <button
+              v-for="c in COLORS"
+              :key="c.key"
+              type="button"
+              class="sticky-note__swatch"
+              :class="[c.class, note.color === c.key && 'sticky-note__swatch--active']"
+              :aria-label="`Set color ${c.key}`"
+              @click="emit('update-color', c.key)"
+            />
+          </div>
+          <button type="button" class="sticky-note__delete" aria-label="Delete note" @click="emit('delete')">
+            &times;
+          </button>
         </div>
-        <button type="button" class="sticky-note__delete" aria-label="Delete note" @click="emit('delete')">
-          &times;
-        </button>
-      </div>
 
-      <textarea
-        class="sticky-note__textarea"
-        :value="localText"
-        placeholder="Type something..."
-        @input="onInput"
-        @blur="flushText"
-      />
+        <textarea
+          class="sticky-note__textarea"
+          :value="localText"
+          placeholder="Type something..."
+          @input="onInput"
+          @blur="flushText"
+        />
+      </div>
+    </div>
+
+    <!-- Real 3D fold: a small flap rotated in space around the diagonal
+         crease, with separate front/back faces so the back genuinely
+         comes into view as it rotates past 90deg, instead of a flat
+         gradient standing in for depth. -->
+    <div class="sticky-note__fold" aria-hidden="true">
+      <div class="sticky-note__fold-face sticky-note__fold-face--front"></div>
+      <div class="sticky-note__fold-face sticky-note__fold-face--back"></div>
     </div>
   </div>
 </template>
@@ -144,7 +160,46 @@ onUnmounted(() => clearTimeout(saveTimer));
  */
 
 .sticky-note {
-  @apply pointer-events-auto absolute flex h-[200px] w-[200px] flex-col rounded-lg;
+  @apply pointer-events-auto absolute flex h-[200px] w-[200px] flex-col;
+  perspective: 220px;
+
+  transform: rotate(var(--rest-rotation, 0deg));
+  transition: transform 0.15s ease;
+}
+.sticky-note:hover {
+  transform: rotate(calc(var(--rest-rotation, 0deg) * 1.6)) scale(1.035);
+}
+.sticky-note.sticky-note--dragging {
+  transform: rotate(-1.5deg) scale(1.06);
+  cursor: grabbing;
+}
+
+/* Soft blurred shadow cast into the gap under the fold - sits on the
+   outer element (unclipped) rather than .sticky-note__page, so cutting
+   that page's corner below doesn't cut the shadow meant to fill the gap. */
+.sticky-note::before {
+  content: '';
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 34px;
+  height: 34px;
+  pointer-events: none;
+  background: radial-gradient(circle at 100% 100%, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.16) 45%, transparent 72%);
+  filter: blur(3px);
+  z-index: 0;
+}
+
+/* The page's own body. Clipped to a pentagon: full square minus the
+   bottom-right corner triangle that the fold now occupies in 3D, with
+   the other 3 corners kept at the previous 8px rounding via arcs in the
+   path (clip-path polygons can't mix straight cuts and round corners,
+   hence path() instead of a plain polygon). */
+.sticky-note__page {
+  @apply relative h-full w-full;
+  clip-path: path(
+    'M8 0 L192 0 A8 8 0 0 1 200 8 L200 158 L158 200 L8 200 A8 8 0 0 1 0 192 L0 8 A8 8 0 0 1 8 0 Z'
+  );
 
   /* Two background-image layers over the Tailwind bg-color utility below:
      a diagonal light/dark sheen (uneven reflection off the paper) painted
@@ -163,55 +218,59 @@ onUnmounted(() => clearTimeout(saveTimer));
      soft, blurred, asymmetric shadow (offset down-right, as if lit from
      the upper left) so the note reads as lifting off the surface. */
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 6px 14px 24px -8px rgba(0, 0, 0, 0.28);
-
-  transform: rotate(var(--rest-rotation, 0deg));
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: box-shadow 0.15s ease;
 }
-.sticky-note:hover {
-  transform: rotate(calc(var(--rest-rotation, 0deg) * 1.6)) scale(1.035);
+.sticky-note:hover .sticky-note__page {
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.3), 10px 20px 32px -8px rgba(0, 0, 0, 0.32);
 }
-.sticky-note.sticky-note--dragging {
-  transform: rotate(-1.5deg) scale(1.06);
+.sticky-note.sticky-note--dragging .sticky-note__page {
   box-shadow: 0 3px 3px rgba(0, 0, 0, 0.32), 14px 28px 42px -10px rgba(0, 0, 0, 0.4);
-  cursor: grabbing;
 }
 
-/* Folded corner, built from two stacked pseudo-elements for real depth:
-   ::before is a soft, blurred dark patch cast onto the page by the lifted
-   flap; ::after is the flap itself, a crisp triangle lightest at the
-   crease (catching light as it lifts) and darkest at the folded tip. */
-.sticky-note::before {
-  content: '';
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 34px;
-  height: 34px;
-  pointer-events: none;
-  background: radial-gradient(circle at 100% 100%, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.16) 45%, transparent 72%);
-  filter: blur(3px);
-  z-index: 0;
-}
-.sticky-note::after {
-  content: '';
+/* Real 3D fold: rotated around the diagonal crease (axis (1,-1,0), the
+   anti-diagonal of the flap's own box) rather than faked with a gradient.
+   Past 90deg the front face's backface-visibility hides it and the back
+   face - pre-rotated 180deg on the same axis so it lands facing the
+   viewer - takes over, the same technique flip-cards use, just on a
+   diagonal axis instead of a straight one. */
+.sticky-note__fold {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 28px;
-  height: 28px;
+  width: 42px;
+  height: 42px;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  transform: rotate3d(1, -1, 0, 155deg);
+  transition: transform 0.2s ease;
   pointer-events: none;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.8) 0%,
-    rgba(255, 255, 255, 0.35) 35%,
-    rgba(0, 0, 0, 0.1) 60%,
-    rgba(0, 0, 0, 0.28) 100%
-  );
-  clip-path: polygon(100% 0, 0% 100%, 100% 100%);
-  border-bottom-right-radius: 8px;
-  box-shadow: -1px -1px 3px rgba(0, 0, 0, 0.22);
   z-index: 1;
+}
+.sticky-note:hover .sticky-note__fold {
+  transform: rotate3d(1, -1, 0, 167deg);
+}
+.sticky-note.sticky-note--dragging .sticky-note__fold {
+  transform: rotate3d(1, -1, 0, 170deg);
+}
+.sticky-note__fold-face {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(100% 0, 0% 100%, 100% 100%);
+  backface-visibility: hidden;
+}
+.sticky-note__fold-face--front {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(0, 0, 0, 0.04));
+}
+.sticky-note__fold-face--back {
+  transform: rotate3d(1, -1, 0, 180deg);
+  background: linear-gradient(315deg, #fffbea 0%, #f0dc9a 45%, #c9a94f 100%);
+  box-shadow: -3px 3px 8px rgba(0, 0, 0, 0.32);
+}
+.sticky-note__page.bg-cyan-100 ~ .sticky-note__fold .sticky-note__fold-face--back {
+  background: linear-gradient(315deg, #f2fdff 0%, #a9e4ee 45%, #4fb3c4 100%);
+}
+.sticky-note__page.bg-emerald-100 ~ .sticky-note__fold .sticky-note__fold-face--back {
+  background: linear-gradient(315deg, #f3fdf7 0%, #a3e6c1 45%, #4aa876 100%);
 }
 
 /* Real DOM content sits above both corner pseudo-elements. */
