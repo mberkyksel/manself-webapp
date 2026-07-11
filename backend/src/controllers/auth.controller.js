@@ -21,9 +21,22 @@ function toPublicUser(user) {
   };
 }
 
+// Basic sanity check on a client-supplied IANA timezone name before trusting
+// it, so a malformed value falls back to the model's default instead of
+// getting stored as-is.
+function isValidTimezone(timezone) {
+  if (!timezone) return false;
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function register(req, res, next) {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, timezone } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: { message: 'name, email, and password are required' } });
@@ -38,7 +51,15 @@ export async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = await User.create({ name, email, passwordHash });
+    const user = await User.create({
+      name,
+      email,
+      passwordHash,
+      // Captures the browser's real IANA timezone at signup so the clock
+      // widget shows local time instead of always falling back to the
+      // column's UTC default.
+      ...(isValidTimezone(timezone) && { timezone }),
+    });
 
     res.status(201).json({ token: signToken(user), user: toPublicUser(user) });
   } catch (err) {

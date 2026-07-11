@@ -11,7 +11,8 @@ const email = ref('');
 const password = ref('');
 
 async function onSubmit() {
-  const success = await userStore.register({ name: name.value, email: email.value, password: password.value });
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const success = await userStore.register({ name: name.value, email: email.value, password: password.value, timezone });
   if (success) {
     router.push({ name: 'dashboard' });
   }
