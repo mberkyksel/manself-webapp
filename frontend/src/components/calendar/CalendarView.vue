@@ -33,11 +33,11 @@ function isToday(date) {
   return dateKey(date) === dateKey(today);
 }
 
-// Collapsed default: today plus the next 14 days (a half-month/bi-weekly
+// Collapsed default: today plus the next 10 days (a half-month/bi-weekly
 // horizon), independent of calendar-month boundaries.
-const next15Days = computed(() => {
+const next10Days = computed(() => {
   const days = [];
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 10; i++) {
     days.push(new Date(today.getFullYear(), today.getMonth(), today.getDate() + i));
   }
   return days;
@@ -127,7 +127,7 @@ async function updateEvent(id, payload) {
   <div class="calendar-view">
     <div class="calendar-view__header">
       <h2 class="calendar-view__title">
-        {{ isExpanded ? monthLabel : 'Next 15 days' }}
+        {{ isExpanded ? monthLabel : 'Next 1O days' }}
       </h2>
 
       <div class="calendar-view__nav">
@@ -147,7 +147,7 @@ async function updateEvent(id, payload) {
     <!-- Collapsed: compact 15-day list -->
     <div v-if="!isExpanded" class="calendar-view__compact-grid">
       <CalendarDayCell
-        v-for="date in next15Days"
+        v-for="date in next10Days"
         :key="dateKey(date)"
         :date="date"
         :events="eventsFor(date)"
