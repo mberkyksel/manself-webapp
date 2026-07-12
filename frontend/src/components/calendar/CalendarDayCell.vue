@@ -1,16 +1,35 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { choreIcon, choreColorClass, choreLabel } from '../../constants/chores.js';
 
 const props = defineProps({
   date: { type: Date, required: true },
   events: { type: Array, default: () => [] },
   tasks: { type: Array, default: () => [] },
+  chores: { type: Array, default: () => [] },
   isToday: { type: Boolean, default: false },
   outside: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['add-event', 'update-event', 'remove-event']);
+const emit = defineEmits(['add-event', 'update-event', 'remove-event', 'drop-chore', 'remove-chore']);
+
+// Reads the JSON payload a ChoresWidget icon set on dragstart; silently
+// ignores drops that don't carry our chore payload (e.g. stray file drags).
+function onDrop(event) {
+  const raw = event.dataTransfer.getData('application/json');
+  if (!raw) return;
+
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+
+  emit('drop-chore', { id: crypto.randomUUID(), type: payload.type, state: payload.state });
+}
 
 const isOpen = ref(false);
 const editingEventId = ref(null);
@@ -97,7 +116,23 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
 <template>
   <div
     :class="['calendar-day-cell', compact && 'calendar-day-cell--compact', outside && 'calendar-day-cell--outside']"
+    @dragover.prevent
+    @drop.prevent="onDrop"
   >
+    <div v-if="chores.length" class="calendar-day-cell__chores">
+      <button
+        v-for="chore in chores"
+        :key="chore.id"
+        type="button"
+        class="calendar-day-cell__chore-badge"
+        :class="choreColorClass(chore)"
+        :title="`${choreLabel(chore)} — click to remove`"
+        @click="emit('remove-chore', chore.id)"
+      >
+        <component :is="choreIcon(chore.type)" :size="11" />
+      </button>
+    </div>
+
     <div class="calendar-day-cell__header">
       <span
         :class="[
@@ -153,7 +188,13 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
 
 <style scoped>
 .calendar-day-cell {
-  @apply flex min-h-24 flex-col bg-white p-1 text-left align-top;
+  @apply relative flex min-h-24 flex-col bg-white p-1 text-left align-top;
+}
+.calendar-day-cell__chores {
+  @apply absolute -top-2 left-1/2 z-10 flex -translate-x-1/2 gap-0.5;
+}
+.calendar-day-cell__chore-badge {
+  @apply flex h-4 w-4 items-center justify-center rounded-full shadow-sm;
 }
 .calendar-day-cell--compact {
   @apply min-h-28;

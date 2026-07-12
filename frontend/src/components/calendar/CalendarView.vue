@@ -3,9 +3,11 @@ import { ref, computed, onMounted } from 'vue';
 import CalendarDayCell from './CalendarDayCell.vue';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useCalendarStore } from '../../stores/calendarStore.js';
+import { useChoreStore } from '../../stores/choreStore.js';
 
 const taskStore = useTaskStore();
 const calendarStore = useCalendarStore();
+const choreStore = useChoreStore();
 
 const today = new Date();
 const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -84,6 +86,10 @@ function eventsFor(date) {
   return eventsByDay.value[dateKey(date)] || [];
 }
 
+function choresFor(date) {
+  return choreStore.choresByDate[dateKey(date)] || [];
+}
+
 function prevMonth() {
   viewDate.value = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() - 1, 1);
 }
@@ -152,12 +158,15 @@ async function updateEvent(id, payload) {
         :date="date"
         :events="eventsFor(date)"
         :tasks="taskStore.tasks"
+        :chores="choresFor(date)"
         :is-today="isToday(date)"
         compact
         class="calendar-view__compact-cell"
         @add-event="addEvent"
         @update-event="({ id, payload }) => updateEvent(id, payload)"
         @remove-event="calendarStore.removeEvent"
+        @drop-chore="choreStore.addChore(dateKey(date), $event)"
+        @remove-chore="choreStore.removeChore(dateKey(date), $event)"
       />
     </div>
 
@@ -174,11 +183,14 @@ async function updateEvent(id, payload) {
           :date="cell.date"
           :events="eventsFor(cell.date)"
           :tasks="taskStore.tasks"
+          :chores="choresFor(cell.date)"
           :is-today="isToday(cell.date)"
           :outside="cell.outside"
           @add-event="addEvent"
           @update-event="({ id, payload }) => updateEvent(id, payload)"
           @remove-event="calendarStore.removeEvent"
+          @drop-chore="choreStore.addChore(dateKey(cell.date), $event)"
+          @remove-chore="choreStore.removeChore(dateKey(cell.date), $event)"
         />
       </div>
     </template>
