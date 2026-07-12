@@ -2,6 +2,7 @@
 import WelcomeBanner from '../components/dashboard/WelcomeBanner.vue';
 import WeatherWidget from '../components/dashboard/WeatherWidget.vue';
 import ClockWidget from '../components/dashboard/ClockWidget.vue';
+import ChoresWidget from '../components/dashboard/ChoresWidget.vue';
 import CalendarView from '../components/calendar/CalendarView.vue';
 import KanbanBoard from '../components/kanban/KanbanBoard.vue';
 import StickyNotesManager from '../components/dashboard/StickyNotesManager.vue';
@@ -10,6 +11,7 @@ import TodayTodoTable from '../components/dashboard/TodayTodoTable.vue';
 
 <template>
   <main class="dashboard-view">
+    <ChoresWidget />
     <div class="dashboard-view__calendar">
       <CalendarView />
     </div>
