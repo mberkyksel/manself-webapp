@@ -167,6 +167,7 @@ async function updateEvent(id, payload) {
         @remove-event="calendarStore.removeEvent"
         @drop-chore="choreStore.addChore(dateKey(date), $event)"
         @remove-chore="choreStore.removeChore(dateKey(date), $event)"
+        @toggle-chore="choreStore.toggleChoreDone(dateKey(date), $event)"
       />
     </div>
 
@@ -191,6 +192,7 @@ async function updateEvent(id, payload) {
           @remove-event="calendarStore.removeEvent"
           @drop-chore="choreStore.addChore(dateKey(cell.date), $event)"
           @remove-chore="choreStore.removeChore(dateKey(cell.date), $event)"
+          @toggle-chore="choreStore.toggleChoreDone(dateKey(cell.date), $event)"
         />
       </div>
     </template>

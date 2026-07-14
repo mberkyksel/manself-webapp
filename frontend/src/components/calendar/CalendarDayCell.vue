@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { choreIcon, choreColorClass, choreLabel } from '../../constants/chores.js';
+import ChoreBadge from '../dashboard/ChoreBadge.vue';
 
 const props = defineProps({
   date: { type: Date, required: true },
@@ -12,7 +12,7 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['add-event', 'update-event', 'remove-event', 'drop-chore', 'remove-chore']);
+const emit = defineEmits(['add-event', 'update-event', 'remove-event', 'drop-chore', 'remove-chore', 'toggle-chore']);
 
 // Reads the JSON payload a ChoresWidget icon set on dragstart; silently
 // ignores drops that don't carry our chore payload (e.g. stray file drags).
@@ -120,17 +120,14 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
     @drop.prevent="onDrop"
   >
     <div v-if="chores.length" class="calendar-day-cell__chores">
-      <button
+      <ChoreBadge
         v-for="chore in chores"
         :key="chore.id"
-        type="button"
-        class="calendar-day-cell__chore-badge"
-        :class="choreColorClass(chore)"
-        :title="`${choreLabel(chore)} — click to remove`"
-        @click="emit('remove-chore', chore.id)"
-      >
-        <component :is="choreIcon(chore.type)" :size="11" />
-      </button>
+        :chore="chore"
+        size="sm"
+        @toggle="emit('toggle-chore', $event)"
+        @delete="emit('remove-chore', $event)"
+      />
     </div>
 
     <div class="calendar-day-cell__header">
@@ -192,9 +189,6 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
 }
 .calendar-day-cell__chores {
   @apply absolute -top-2 left-1/2 z-10 flex -translate-x-1/2 gap-0.5;
-}
-.calendar-day-cell__chore-badge {
-  @apply flex h-4 w-4 items-center justify-center rounded-full shadow-sm;
 }
 .calendar-day-cell--compact {
   @apply min-h-28;

@@ -175,7 +175,10 @@ const legendItems = [
             {{ entry.text }}
           </li>
         </ul>
-        <p class="chores-widget__legend-hint">Drag any icon onto a day. Click a scheduled badge to remove it.</p>
+        <p class="chores-widget__legend-hint">
+          Drag any icon onto a day or the Welcome Panel. Click a scheduled badge to mark it done, double-click to
+          remove it.
+        </p>
       </div>
     </div>
   </div>
@@ -183,13 +186,15 @@ const legendItems = [
 
 <style scoped>
 .chores-widget {
-  @apply fixed right-4 top-8 z-50 w-64 rounded-2xl border border-white/40 backdrop-blur-md;
-  background-color: rgba(255, 255, 255, 0.3);
-  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  /* Tailwind's amber-400 (#fbbf24 = rgb(251,191,36)) and amber-700 (#b45309)
+     are exactly the colors called out in spec, so the opacity-modifier
+     utilities below hit those rgba() values precisely. */
+  @apply fixed right-4 top-12 z-50 w-64 rounded-2xl border border-amber-400/20 bg-amber-400/10;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.5),
-    inset 0 -6px 14px rgba(15, 23, 42, 0.12),
-    0 10px 30px -10px rgba(15, 23, 42, 0.25);
+    inset 0 2px 4px rgba(0, 0, 0, 0.1),
+    0 10px 30px -10px rgba(120, 53, 15, 0.35);
 }
 
 /* Stylized gable roof, built with the classic CSS border-triangle technique
@@ -201,15 +206,15 @@ const legendItems = [
    the body below keeps the full blur/gradient/inset-shadow treatment. */
 .chores-widget__roof {
   position: absolute;
-  top: -26px;
+  top: -34px;
   left: 50%;
   width: 0;
   height: 0;
   transform: translateX(-50%);
   border-left: 122px solid transparent;
   border-right: 122px solid transparent;
-  border-bottom: 28px solid rgba(255, 255, 255, 0.65);
-  filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.3));
+  border-bottom: 38px solid rgba(251, 191, 36, 0.22);
+  filter: drop-shadow(0 6px 10px rgba(120, 53, 15, 0.4));
 }
 
 .chores-widget__body {
@@ -219,10 +224,11 @@ const legendItems = [
   @apply flex items-center justify-between;
 }
 .chores-widget__title {
-  @apply text-xs font-semibold uppercase tracking-wide text-slate-600;
+  @apply text-xs font-semibold justify-center uppercase tracking-wide text-amber-900;
+  text-align: center
 }
 .chores-widget__info-btn {
-  @apply flex h-5 w-5 items-center justify-center rounded-full text-slate-500 hover:bg-white/60 hover:text-slate-700;
+  @apply flex h-5 w-5 items-center justify-center rounded-full text-amber-700 hover:bg-amber-400/20 hover:text-amber-900;
 }
 .chores-widget__grid {
   @apply mt-3 grid grid-cols-4 gap-2;
@@ -236,27 +242,30 @@ const legendItems = [
 .chores-widget__divider::before,
 .chores-widget__divider::after {
   content: '';
-  @apply h-px flex-1 bg-white/40;
+  @apply h-px flex-1 bg-amber-400/30;
 }
 .chores-widget__divider-label {
-  @apply shrink-0 text-[9px] font-semibold uppercase tracking-wide text-slate-500;
+  @apply shrink-0 text-[9px] font-semibold uppercase tracking-wide text-amber-700;
 }
 .chores-widget__legend {
   @apply mt-0 max-h-0 overflow-hidden opacity-0 transition-all duration-300;
 }
 .chores-widget__legend--open {
-  @apply mt-3 max-h-[26rem] opacity-100;
+  @apply mt-3 max-h-[26rem] rounded-xl border border-amber-400/20 bg-amber-400/10 p-2 opacity-100;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .chores-widget__legend-list {
-  @apply flex flex-col gap-1.5 text-[11px] text-slate-600;
+  @apply flex flex-col gap-1.5 text-[11px] text-amber-900/90;
 }
 .chores-widget__legend-list li {
   @apply flex items-center gap-1.5;
 }
 .chores-widget__legend-icon {
-  @apply shrink-0 text-slate-500;
+  @apply shrink-0 text-amber-700;
 }
 .chores-widget__legend-hint {
-  @apply mt-2 border-t border-white/40 pt-2 text-[10px] text-slate-500;
+  @apply mt-2 border-t border-amber-400/30 pt-2 text-[10px] text-amber-700;
 }
 </style>
