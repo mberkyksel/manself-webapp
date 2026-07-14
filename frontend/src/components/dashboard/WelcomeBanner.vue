@@ -4,10 +4,13 @@ import { useRouter } from 'vue-router';
 import { useUserStore } from '../../stores/userStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useCalendarStore } from '../../stores/calendarStore.js';
+import { useChoreStore } from '../../stores/choreStore.js';
+import ChoreBadge from './ChoreBadge.vue';
 
 const userStore = useUserStore();
 const taskStore = useTaskStore();
 const calendarStore = useCalendarStore();
+const choreStore = useChoreStore();
 const router = useRouter();
 
 const greeting = computed(() => {
@@ -37,6 +40,8 @@ const todosToday = computed(
   () => taskStore.tasks.filter((task) => task.dueDate === todayDateOnly.value && task.status !== 'done').length
 );
 
+const todaysChores = computed(() => choreStore.choresByDate[todayDateOnly.value] || []);
+
 onMounted(() => {
   taskStore.fetchTasks();
   calendarStore.fetchEvents();
@@ -54,8 +59,11 @@ function onLogout() {
     <p class="welcome-banner__subtitle">Here's what's happening today.</p>
 
     <div class="welcome-banner__stats">
-      <span class="welcome-banner__stat">📅 {{ eventsToday }} event{{ eventsToday === 1 ? '' : 's' }} today</span>
-      <span class="welcome-banner__stat">✓ {{ todosToday }} todo{{ todosToday === 1 ? '' : 's' }} due today</span>
+      <span class="welcome-banner__stat">📅 {{ eventsToday }} event{{ eventsToday === 1 ? '' : 's' }} </span>
+      <span class="welcome-banner__stat">✓ {{ todosToday }} todo{{ todosToday === 1 ? '' : 's' }} </span>
+      <span v-if="todaysChores.length" class="welcome-banner__stat welcome-banner__stat--chores">
+        🧹 {{ todaysChores.length }} house dut{{ todaysChores.length === 1 ? 'y' : 'ies' }}
+      </span>
     </div>
 
     <button v-if="userStore.isAuthenticated" type="button" class="welcome-banner__logout" @click="onLogout">
@@ -80,7 +88,13 @@ function onLogout() {
 .welcome-banner__stat {
   @apply inline-flex w-fit items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-600;
 }
+.welcome-banner__stat--chores {
+  @apply bg-amber-50 text-amber-700;
+}
 .welcome-banner__logout {
   @apply mt-3 text-sm text-slate-400 hover:text-slate-600 hover:underline;
+}
+.welcome-banner__chores-row {
+  @apply mt-3 flex flex-wrap items-center gap-2;
 }
 </style>
