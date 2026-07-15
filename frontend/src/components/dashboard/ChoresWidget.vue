@@ -121,7 +121,7 @@ const legendItems = [
 
     <div class="chores-widget__body">
       <div class="chores-widget__header">
-        <span class="chores-widget__title">House Chores</span>
+        <span class="chores-widget__title">Home Widget</span>
         <button
           type="button"
           class="chores-widget__info-btn"

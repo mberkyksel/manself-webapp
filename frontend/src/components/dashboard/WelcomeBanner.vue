@@ -1,11 +1,17 @@
 <script setup>
 import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { House } from '@lucide/vue';
 import { useUserStore } from '../../stores/userStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useCalendarStore } from '../../stores/calendarStore.js';
 import { useChoreStore } from '../../stores/choreStore.js';
 import ChoreBadge from './ChoreBadge.vue';
+
+defineProps({
+  choresOpen: { type: Boolean, default: false },
+});
+defineEmits(['toggle-chores']);
 
 const userStore = useUserStore();
 const taskStore = useTaskStore();
@@ -55,6 +61,16 @@ function onLogout() {
 
 <template>
   <div class="welcome-banner">
+    <button
+      type="button"
+      class="welcome-banner__chores-toggle"
+      :aria-pressed="choresOpen"
+      :title="choresOpen ? 'Hide House Chores widget' : 'Show House Chores widget'"
+      @click="$emit('toggle-chores')"
+    >
+      <House :size="18" />
+    </button>
+
     <h1 class="welcome-banner__title">{{ greeting }}, {{ userStore.name }}</h1>
     <p class="welcome-banner__subtitle">Here's what's happening today.</p>
 
@@ -93,6 +109,13 @@ function onLogout() {
 }
 .welcome-banner__logout {
   @apply mt-3 text-sm text-slate-400 hover:text-slate-600 hover:underline;
+}
+.welcome-banner__chores-toggle {
+  @apply absolute right-6 top-6 flex h-9 w-9 items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-700 transition duration-200 hover:scale-110 hover:bg-amber-400/20;
+  box-shadow: 0 0 0 rgba(251, 191, 36, 0);
+}
+.welcome-banner__chores-toggle:hover {
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.55);
 }
 .welcome-banner__chores-row {
   @apply mt-3 flex flex-wrap items-center gap-2;

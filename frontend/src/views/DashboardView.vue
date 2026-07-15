@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue';
 import WelcomeBanner from '../components/dashboard/WelcomeBanner.vue';
 import WeatherWidget from '../components/dashboard/WeatherWidget.vue';
 import ClockWidget from '../components/dashboard/ClockWidget.vue';
@@ -7,11 +8,25 @@ import CalendarView from '../components/calendar/CalendarView.vue';
 import KanbanBoard from '../components/kanban/KanbanBoard.vue';
 import StickyNotesManager from '../components/dashboard/StickyNotesManager.vue';
 import TodayTodoTable from '../components/dashboard/TodayTodoTable.vue';
+
+// WelcomeBanner and ChoresWidget are siblings here, so the open/closed state
+// lives in this common parent and flows down as a prop / up as an event.
+const isChoresWidgetOpen = ref(true);
 </script>
 
 <template>
   <main class="dashboard-view">
-    <ChoresWidget />
+    <Transition
+      enter-active-class="transition ease-out duration-200"
+      enter-from-class="transform opacity-0 scale-95"
+      enter-to-class="transform opacity-100 scale-100"
+      leave-active-class="transition ease-in duration-150"
+      leave-from-class="transform opacity-100 scale-100"
+      leave-to-class="transform opacity-0 scale-95"
+    >
+      <ChoresWidget v-if="isChoresWidgetOpen" />
+    </Transition>
+
     <div class="dashboard-view__calendar">
       <CalendarView />
     </div>
@@ -21,7 +36,7 @@ import TodayTodoTable from '../components/dashboard/TodayTodoTable.vue';
       <div class="dashboard-view__blob dashboard-view__blob--2" aria-hidden="true"></div>
       <div class="dashboard-view__blob dashboard-view__blob--3" aria-hidden="true"></div>
 
-      <WelcomeBanner />
+      <WelcomeBanner :chores-open="isChoresWidgetOpen" @toggle-chores="isChoresWidgetOpen = !isChoresWidgetOpen" />
       <WeatherWidget />
       <ClockWidget />
     </div>
