@@ -150,10 +150,8 @@ onUnmounted(() => clearTimeout(saveTimer));
 
 <style scoped>
 /*
- * Font: Permanent Marker, imported in index.html via <link> (preconnect +
- * stylesheet, non-render-blocking). Equivalent @import if you ever need to
- * inline it into a global stylesheet instead:
- *   @import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
+ * Font: Permanent Marker, self-hosted via @font-face in assets/main.css
+ * (see src/assets/fonts/) instead of Google Fonts' CDN.
  * It only ships one weight (400) - there's no bold cut to switch to, so the
  * extra "thick marker" weight below is faked with a text-stroke + shadow
  * stack on .sticky-note__textarea rather than font-weight.
