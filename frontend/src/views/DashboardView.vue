@@ -4,6 +4,7 @@ import WelcomeBanner from '../components/dashboard/WelcomeBanner.vue';
 import WeatherWidget from '../components/dashboard/WeatherWidget.vue';
 import ClockWidget from '../components/dashboard/ClockWidget.vue';
 import ChoresWidget from '../components/dashboard/ChoresWidget.vue';
+import SidePanel from '../components/dashboard/SidePanel.vue';
 import CalendarView from '../components/calendar/CalendarView.vue';
 import KanbanBoard from '../components/kanban/KanbanBoard.vue';
 import StickyNotesManager from '../components/dashboard/StickyNotesManager.vue';
@@ -16,6 +17,8 @@ const isChoresWidgetOpen = ref(true);
 
 <template>
   <main class="dashboard-view">
+    <SidePanel />
+
     <Transition
       enter-active-class="transition ease-out duration-200"
       enter-from-class="transform opacity-0 scale-95"
