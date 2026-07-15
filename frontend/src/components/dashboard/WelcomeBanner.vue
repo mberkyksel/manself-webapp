@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { House } from '@lucide/vue';
 import { useUserStore } from '../../stores/userStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
@@ -17,7 +16,6 @@ const userStore = useUserStore();
 const taskStore = useTaskStore();
 const calendarStore = useCalendarStore();
 const choreStore = useChoreStore();
-const router = useRouter();
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
@@ -52,11 +50,6 @@ onMounted(() => {
   taskStore.fetchTasks();
   calendarStore.fetchEvents();
 });
-
-function onLogout() {
-  userStore.logout();
-  router.push({ name: 'login' });
-}
 </script>
 
 <template>
@@ -81,10 +74,6 @@ function onLogout() {
         🧹 {{ todaysChores.length }} house dut{{ todaysChores.length === 1 ? 'y' : 'ies' }}
       </span>
     </div>
-
-    <button v-if="userStore.isAuthenticated" type="button" class="welcome-banner__logout" @click="onLogout">
-      Log out
-    </button>
   </div>
 </template>
 
@@ -106,9 +95,6 @@ function onLogout() {
 }
 .welcome-banner__stat--chores {
   @apply bg-amber-50 text-amber-700;
-}
-.welcome-banner__logout {
-  @apply mt-3 text-sm text-slate-400 hover:text-slate-600 hover:underline;
 }
 .welcome-banner__chores-toggle {
   @apply absolute right-6 top-6 flex h-9 w-9 items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-700 transition duration-200 hover:scale-110 hover:bg-amber-400/20;
