@@ -17,8 +17,37 @@ services:
       timeout: 5s
       retries: 5
 
-  # backend and frontend services will be added here in a later stage,
-  # once each has its own Dockerfile.
+  backend:
+    build:
+      context: ./backend
+    container_name: manself-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Overrides the .env file's DATABASE_URL (which points at localhost,
+      # for running the backend outside Docker) with the compose network's
+      # internal hostname for the postgres service. NODE_ENV is pinned here
+      # too so a dev-oriented .env (NODE_ENV=development, per .env.example)
+      # can't accidentally override the image's production mode.
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-manself_dev}
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - '${BACKEND_PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: manself-frontend
+    restart: unless-stopped
+    ports:
+      - '${FRONTEND_PORT:-8080}:80'
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
