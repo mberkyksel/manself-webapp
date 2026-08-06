@@ -77,6 +77,21 @@ export const useUserStore = defineStore('user', {
       }
     },
 
+    async updatePassword({ currentPassword, newPassword }) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const { user } = await authService.updatePassword({ currentPassword, newPassword });
+        this.user = user;
+        return true;
+      } catch (err) {
+        this.error = err.response?.data?.error?.message || 'Could not update password.';
+        return false;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     logout() {
       this.clearSession();
     },
