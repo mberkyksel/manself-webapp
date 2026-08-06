@@ -1,6 +1,6 @@
 # manself-webapp
 
-A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google Calendar integration planned), and a Jira-style kanban task board.
+A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google Calendar integration planned), a Jira-style kanban task board, a drag-to-schedule recurring household chores widget, freely-positioned sticky notes, and a due-today/overdue todo list - with full account management (register, login, profile/email/password updates, account deletion) behind it.
 
 ## Tech stack
 
