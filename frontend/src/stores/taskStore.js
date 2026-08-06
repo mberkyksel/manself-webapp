@@ -40,9 +40,16 @@ export const useTaskStore = defineStore('task', {
     },
 
     async addTask({ title, status = 'todo', priority = 'medium', dueDate = null }) {
-      const task = await taskService.create({ title, status, priority, dueDate });
-      this.tasks.push(task);
-      return task;
+      this.error = null;
+      try {
+        const task = await taskService.create({ title, status, priority, dueDate });
+        this.tasks.push(task);
+        return task;
+      } catch (err) {
+        this.error = 'Could not add task. Is the backend running?';
+        console.error(err);
+        return null;
+      }
     },
 
     async updateTask(id, payload) {

@@ -31,9 +31,11 @@ async function submitNewTask() {
   const title = newTitle.value.trim();
   if (!title) return;
   const dueDate = newDueDate.value || null;
-  newTitle.value = '';
-  newDueDate.value = '';
-  await taskStore.addTask({ title, status: props.status, dueDate });
+  const task = await taskStore.addTask({ title, status: props.status, dueDate });
+  if (task) {
+    newTitle.value = '';
+    newDueDate.value = '';
+  }
 }
 </script>
 
