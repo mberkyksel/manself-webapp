@@ -12,7 +12,15 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['add-event', 'update-event', 'remove-event', 'drop-chore', 'remove-chore', 'toggle-chore']);
+const emit = defineEmits([
+  'add-event',
+  'update-event',
+  'remove-event',
+  'drop-chore',
+  'remove-chore',
+  'toggle-chore',
+  'cycle-chore-recurrence',
+]);
 
 // Reads the JSON payload a ChoresWidget icon set on dragstart; silently
 // ignores drops that don't carry our chore payload (e.g. stray file drags).
@@ -127,6 +135,7 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
         size="sm"
         @toggle="emit('toggle-chore', $event)"
         @delete="emit('remove-chore', $event)"
+        @cycle-recurrence="emit('cycle-chore-recurrence', $event)"
       />
     </div>
 
