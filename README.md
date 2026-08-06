@@ -99,7 +99,18 @@ See `frontend/src/` and `backend/src/` for the full module layout (components, c
 
 ## Status
 
-Skeleton stage: Express server, Postgres schema/migrations, and Vue app shell are wired up end-to-end. Authentication, the weather widget, and Google Calendar sync are not implemented yet.
+End-to-end functional, not just a skeleton:
+
+- **Auth**: register, login, update name/email/password, delete account (all destructive/credential-changing actions require the current password), session-expiry handling (expired/invalid tokens redirect to login instead of failing silently)
+- **Dashboard**: welcome banner, clock, weather (geolocation + daily-quota API), branded favicon/wordmark, copyright footer
+- **Calendar**: compact and full-month views, event CRUD, optional task linking
+- **Kanban board**: task CRUD, drag-and-drop reordering across columns (mouse and touch, via Pointer Events)
+- **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
+- **Sticky notes**: free-drag positioning on desktop/tablet, a stacked bottom-sheet list on mobile (no free positioning there - not enough room)
+- **Today's Todos**: due-today and overdue tasks, inline complete toggle
+- Responsive down to mobile widths across the whole app
+
+Not implemented yet: Google Calendar sync (calendar events are local-only for now).
 
 ## Docker
 
