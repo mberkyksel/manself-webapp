@@ -103,4 +103,21 @@ Skeleton stage: Express server, Postgres schema/migrations, and Vue app shell ar
 
 ## Docker
 
-`docker-compose.yml` currently runs Postgres only (`docker compose up -d postgres`), for local development. `frontend/` and `backend/` are structured so each can get its own `Dockerfile` and be added as services later without restructuring.
+`docker-compose.yml` runs the full stack: Postgres, the backend API, and the frontend (built and served via nginx).
+
+```bash
+cp .env.example .env   # fill in JWT_SECRET at minimum
+docker compose up -d --build
+```
+
+- Frontend: `http://localhost:8080` (nginx serves the Vite production build and proxies `/api/*` to the backend, same-origin - see `frontend/nginx.conf`)
+- Backend (direct): `http://localhost:3000`
+- Postgres: `localhost:5432`
+
+The backend container runs pending migrations on every start before launching the server, so pulling new migration files just needs a restart - no manual `npm run migrate` step. Override the default host ports with `BACKEND_PORT` / `FRONTEND_PORT` / `POSTGRES_PORT` in `.env` if they collide with something else already running.
+
+To run Postgres only, for local (non-Docker) frontend/backend development:
+
+```bash
+docker compose up -d postgres
+```
