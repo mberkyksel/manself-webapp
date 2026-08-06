@@ -102,3 +102,33 @@ export async function me(req, res, next) {
     next(err);
   }
 }
+
+export async function updatePassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: { message: 'currentPassword and newPassword are required' } });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: { message: 'newPassword must be at least 8 characters' } });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    // 403, not 401: the request is properly authenticated (requireAuth already
+    // passed), it's just the *current password* that's wrong. The frontend's
+    // response interceptor wipes the stored token on any 401, treating it as
+    // an expired session - using 401 here would silently log the user out on
+    // a simple typo.
+    if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      return res.status(403).json({ error: { message: 'Current password is incorrect' } });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await user.save();
+
+    res.json({ user: toPublicUser(user) });
+  } catch (err) {
+    next(err);
+  }
+}
