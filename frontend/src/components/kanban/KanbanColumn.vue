@@ -27,34 +27,6 @@ function onDragEnd() {
   taskStore.stopDragging();
 }
 
-// Dropping directly on a card inserts the dragged task just before it.
-function onDropOnCard(targetTask) {
-  const draggedId = taskStore.draggingTaskId;
-  if (draggedId == null || draggedId === targetTask.id) return;
-
-  const index = props.tasks.findIndex((t) => t.id === targetTask.id);
-  const beforeTask = props.tasks[index - 1];
-
-  taskStore.moveTask(draggedId, {
-    status: props.status,
-    beforeId: beforeTask?.id ?? null,
-    afterId: targetTask.id,
-  });
-}
-
-// Dropping on empty column space (below the last card) appends to the end.
-function onDropOnColumn() {
-  const draggedId = taskStore.draggingTaskId;
-  if (draggedId == null) return;
-
-  const lastTask = props.tasks[props.tasks.length - 1];
-  taskStore.moveTask(draggedId, {
-    status: props.status,
-    beforeId: lastTask?.id ?? null,
-    afterId: null,
-  });
-}
-
 async function submitNewTask() {
   const title = newTitle.value.trim();
   if (!title) return;
@@ -66,24 +38,24 @@ async function submitNewTask() {
 </script>
 
 <template>
-  <div class="kanban-column" @dragover.prevent @drop="onDropOnColumn">
+  <div class="kanban-column" :data-column-status="status">
     <div class="kanban-column__header">
       <h2 class="kanban-column__title">{{ title }}</h2>
       <span class="kanban-column__count">{{ tasks.length }}</span>
     </div>
 
     <div class="kanban-column__list">
-      <div v-for="task in tasks" :key="task.id" @dragover.prevent @drop.stop="onDropOnCard(task)">
-        <TaskCard
-          :task="task"
-          :event-count="eventCountFor(task.id)"
-          @dragstart="onDragStart(task)"
-          @dragend="onDragEnd"
-          @remove="taskStore.removeTask(task.id)"
-          @update-due-date="taskStore.updateTask(task.id, { dueDate: $event })"
-          @sync-due-date="taskStore.syncDueDateToCalendar(task.id)"
-        />
-      </div>
+      <TaskCard
+        v-for="task in tasks"
+        :key="task.id"
+        :task="task"
+        :event-count="eventCountFor(task.id)"
+        @dragstart="onDragStart(task)"
+        @dragend="onDragEnd"
+        @remove="taskStore.removeTask(task.id)"
+        @update-due-date="taskStore.updateTask(task.id, { dueDate: $event })"
+        @sync-due-date="taskStore.syncDueDateToCalendar(task.id)"
+      />
     </div>
 
     <form class="kanban-column__form" @submit.prevent="submitNewTask">
@@ -121,5 +93,13 @@ async function submitNewTask() {
 }
 .kanban-column__submit {
   @apply shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700;
+}
+</style>
+
+<style>
+/* Unscoped: toggled externally via classList by TaskCard's pointer-drag
+   handler on whatever element document.elementFromPoint resolves to. */
+.kanban-drop-target {
+  @apply ring-2 ring-indigo-400;
 }
 </style>

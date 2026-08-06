@@ -4,6 +4,7 @@ import ChoreBadge from '../dashboard/ChoreBadge.vue';
 
 const props = defineProps({
   date: { type: Date, required: true },
+  dateKey: { type: String, required: true },
   events: { type: Array, default: () => [] },
   tasks: { type: Array, default: () => [] },
   chores: { type: Array, default: () => [] },
@@ -16,28 +17,10 @@ const emit = defineEmits([
   'add-event',
   'update-event',
   'remove-event',
-  'drop-chore',
   'remove-chore',
   'toggle-chore',
   'cycle-chore-recurrence',
 ]);
-
-// Reads the JSON payload a ChoresWidget icon set on dragstart; silently
-// ignores drops that don't carry our chore payload (e.g. stray file drags).
-function onDrop(event) {
-  const raw = event.dataTransfer.getData('application/json');
-  if (!raw) return;
-
-  let payload;
-  try {
-    payload = JSON.parse(raw);
-  } catch (err) {
-    console.error(err);
-    return;
-  }
-
-  emit('drop-chore', { id: crypto.randomUUID(), type: payload.type, state: payload.state });
-}
 
 const isOpen = ref(false);
 const editingEventId = ref(null);
@@ -123,9 +106,8 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
 
 <template>
   <div
+    :data-date-key="dateKey"
     :class="['calendar-day-cell', compact && 'calendar-day-cell--compact', outside && 'calendar-day-cell--outside']"
-    @dragover.prevent
-    @drop.prevent="onDrop"
   >
     <div v-if="chores.length" class="calendar-day-cell__chores">
       <ChoreBadge
@@ -205,6 +187,9 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
 .calendar-day-cell--outside {
   @apply bg-slate-50;
 }
+/* Unscoped equivalent below is toggled externally via classList by
+   ChoresWidget's pointer-drag handler on whatever element
+   document.elementFromPoint resolves to during a chore drag. */
 .calendar-day-cell__header {
   @apply flex items-center justify-between;
 }
@@ -258,5 +243,11 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
 }
 .calendar-day-cell__cancel {
   @apply flex-1 rounded border border-slate-200 py-0.5 text-[10px] text-slate-500;
+}
+</style>
+
+<style>
+.calendar-day-cell--drop-target {
+  @apply ring-2 ring-amber-400;
 }
 </style>
