@@ -20,14 +20,36 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// /auth/login and /auth/register are the only endpoints that legitimately
+// 401 without an existing session (wrong credentials) - everywhere else a
+// 401 means a previously-valid token died mid-session (expired/invalid),
+// which needs a real logout + redirect, not just clearing localStorage.
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register'];
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Clears a stale/expired token so the next route navigation's auth
-    // guard correctly treats the user as logged out.
-    if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
+  async (error) => {
+    const isAuthEndpoint = AUTH_ENDPOINTS.some((path) => error.config?.url?.includes(path));
+
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      // Dynamic imports (not static ones) so this module never has to
+      // import the store/router at load time and risk a circular
+      // dependency (api.js <- authService.js <- userStore.js -> api.js,
+      // and router/index.js -> userStore.js). By the time a request can
+      // actually fail, the app is already fully bootstrapped, so these
+      // resolve instantly from the module cache.
+      const [{ useUserStore }, { default: router }] = await Promise.all([
+        import('../stores/userStore.js'),
+        import('../router/index.js'),
+      ]);
+
+      useUserStore().clearSession();
+
+      if (router.currentRoute.value.name !== 'login') {
+        router.push({ name: 'login', query: { sessionExpired: '1' } });
+      }
     }
+
     return Promise.reject(error);
   }
 );

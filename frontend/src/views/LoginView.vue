@@ -1,12 +1,22 @@
 <script setup>
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '../stores/userStore.js';
 import AppFooter from '../components/AppFooter.vue';
 import brandMark from '../assets/brand/manself-mark-transparent.svg';
 
 const userStore = useUserStore();
 const router = useRouter();
+const route = useRoute();
+
+// Set by api.js's response interceptor when a request 401s mid-session
+// (expired/invalid token), as opposed to a plain failed login attempt.
+// Stripped from the URL immediately so refreshing the login page doesn't
+// keep re-showing it.
+const showSessionExpired = ref(route.query.sessionExpired === '1');
+if (showSessionExpired.value) {
+  router.replace({ name: 'login' });
+}
 
 const email = ref('');
 const password = ref('');
@@ -28,6 +38,8 @@ async function onSubmit() {
           <h1 class="login-view__title">Log in</h1>
         </div>
         <p class="login-view__subtitle">Welcome back.</p>
+
+        <p v-if="showSessionExpired" class="login-view__notice">Your session expired. Please log in again.</p>
 
         <form class="login-view__form" @submit.prevent="onSubmit">
           <input v-model="email" type="email" placeholder="Email" required class="login-view__input" />
@@ -72,6 +84,9 @@ async function onSubmit() {
 }
 .login-view__subtitle {
   @apply mt-2 text-slate-500;
+}
+.login-view__notice {
+  @apply mt-4 rounded-lg bg-amber-50 p-2 text-sm text-amber-700;
 }
 .login-view__form {
   @apply mt-6 flex flex-col gap-3 text-left;
