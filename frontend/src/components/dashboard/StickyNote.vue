@@ -1,13 +1,19 @@
 <script setup>
-import { reactive, ref, computed, watch, onUnmounted } from 'vue';
+import { reactive, ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { usePointerDrag } from '../../composables/usePointerDrag.js';
 
 const props = defineProps({
   note: { type: Object, required: true },
+  // True on narrow viewports, where notes render in a stacked list instead
+  // of free-floating - see StickyNotesManager.vue. Stacked notes don't
+  // drag, tilt, or track z-index; there's nothing to overlap in a list.
+  stacked: { type: Boolean, default: false },
 });
 
 // Every note gets a small persistent tilt, like it was actually stuck down
 // by hand, deterministic per id so it doesn't jump around on re-render.
 const restRotation = computed(() => {
+  if (props.stacked) return 0;
   const n = props.note.id;
   return (((n * 47) % 13) - 6) * 0.5;
 });
@@ -25,54 +31,59 @@ const COLORS = [
 const colorClasses = { yellow: 'bg-amber-100', cyan: 'bg-cyan-100', green: 'bg-emerald-100' };
 
 // Local reactive position so dragging feels instant; only synced back to
-// the store (and persisted) on mouseup.
+// the store (and persisted) on drag end.
 const position = reactive({ x: props.note.positionX, y: props.note.positionY });
-const dragging = ref(false);
-let dragOffset = { x: 0, y: 0 };
-
-watch(
-  () => [props.note.positionX, props.note.positionY],
-  ([x, y]) => {
-    if (!dragging.value) {
-      position.x = x;
-      position.y = y;
-    }
-  }
-);
 
 function clamp(value, max) {
   return Math.min(Math.max(value, 0), Math.max(max, 0));
 }
 
-function onMouseMove(event) {
-  if (!dragging.value) return;
-  position.x = clamp(event.clientX - dragOffset.x, window.innerWidth - NOTE_SIZE);
-  position.y = clamp(event.clientY - dragOffset.y, window.innerHeight - NOTE_SIZE);
+// Re-clamps from the canonical stored position (not the already-clamped
+// local value, so repeated resizes don't cause drift) whenever the prop
+// changes, on mount, and on viewport resize - a note last dragged on a wide
+// desktop screen would otherwise render off-screen on a narrower one. This
+// only adjusts the on-screen render; the stored position is untouched, so
+// the note returns to its "true" spot if the viewport widens again later.
+function syncPosition() {
+  if (isDragging.value) return;
+  position.x = clamp(props.note.positionX, window.innerWidth - NOTE_SIZE);
+  position.y = clamp(props.note.positionY, window.innerHeight - NOTE_SIZE);
 }
 
-function stopDragging() {
-  window.removeEventListener('mousemove', onMouseMove);
-  window.removeEventListener('mouseup', stopDragging);
-  if (!dragging.value) return;
-  dragging.value = false;
-  emit('move', { x: position.x, y: position.y });
+watch(() => [props.note.positionX, props.note.positionY], syncPosition);
+onMounted(() => {
+  syncPosition();
+  window.addEventListener('resize', syncPosition);
+});
+onUnmounted(() => window.removeEventListener('resize', syncPosition));
+
+let dragOffset = { x: 0, y: 0 };
+
+const { onPointerDown: startDrag, isDragging } = usePointerDrag({
+  shouldIgnore: (event) => props.stacked || event.target.closest('textarea, button'),
+  onDragStart(event) {
+    dragOffset = { x: event.clientX - position.x, y: event.clientY - position.y };
+  },
+  onDragMove(event) {
+    position.x = clamp(event.clientX - dragOffset.x, window.innerWidth - NOTE_SIZE);
+    position.y = clamp(event.clientY - dragOffset.y, window.innerHeight - NOTE_SIZE);
+  },
+  onDragEnd() {
+    emit('move', { x: position.x, y: position.y });
+  },
+  onDragCancel() {
+    // No natural "abort" position for a spatial drag - snapping back would
+    // be more surprising than just keeping wherever it visually landed.
+    emit('move', { x: position.x, y: position.y });
+  },
+});
+
+function onPointerDown(event) {
+  // Bring-to-front is meaningless in a stacked list (nothing overlaps), and
+  // would otherwise fire a pointless PATCH on every tap.
+  if (!props.stacked) emit('focus');
+  startDrag(event);
 }
-
-function onMouseDown(event) {
-  emit('focus');
-
-  // Let clicks on the textarea/buttons behave normally (typing, color pick,
-  // delete) instead of starting a drag.
-  if (event.target.closest('textarea, button')) return;
-
-  dragging.value = true;
-  dragOffset = { x: event.clientX - position.x, y: event.clientY - position.y };
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup', stopDragging);
-}
-
-// Defensive cleanup in case the note is deleted (unmounted) mid-drag.
-onUnmounted(stopDragging);
 
 const localText = ref(props.note.text);
 let saveTimer = null;
@@ -94,14 +105,13 @@ onUnmounted(() => clearTimeout(saveTimer));
 <template>
   <div
     class="sticky-note"
-    :class="{ 'sticky-note--dragging': dragging }"
-    :style="{
-      left: `${position.x}px`,
-      top: `${position.y}px`,
-      zIndex: note.zIndex,
-      '--rest-rotation': `${restRotation}deg`,
-    }"
-    @mousedown="onMouseDown"
+    :class="{ 'sticky-note--dragging': isDragging, 'sticky-note--stacked': stacked }"
+    :style="
+      stacked
+        ? {}
+        : { left: `${position.x}px`, top: `${position.y}px`, zIndex: note.zIndex, '--rest-rotation': `${restRotation}deg` }
+    "
+    @pointerdown="onPointerDown"
   >
     <!-- The page's own body. Clipped with a notch matching the fold's
          footprint - once the corner is genuinely rotated away in 3D
@@ -170,6 +180,37 @@ onUnmounted(() => clearTimeout(saveTimer));
 .sticky-note.sticky-note--dragging {
   transform: rotate(-1.5deg) scale(1.06);
   cursor: grabbing;
+}
+
+/* Mobile stacked-list mode (see StickyNotesManager.vue): a flat card in
+   normal document flow instead of a freely-positioned, tiltable note - the
+   fold/clip-path/shadow below are all calibrated for a fixed 200x200 box
+   and would distort at an arbitrary stacked width/height, so this mode
+   drops them entirely rather than trying to make them scale. */
+.sticky-note--stacked {
+  @apply relative left-auto top-auto z-auto mb-3 h-auto min-h-[110px] w-full max-w-none flex-none;
+  transform: none;
+  perspective: none;
+}
+.sticky-note--stacked:hover {
+  transform: none;
+}
+.sticky-note--stacked::before {
+  display: none;
+}
+.sticky-note--stacked .sticky-note__page {
+  @apply h-auto rounded-lg;
+  clip-path: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.sticky-note--stacked .sticky-note__content {
+  @apply h-auto;
+}
+.sticky-note--stacked .sticky-note__textarea {
+  @apply h-auto min-h-[72px];
+}
+.sticky-note--stacked .sticky-note__fold {
+  display: none;
 }
 
 /* Soft blurred shadow cast into the gap under the fold - sits on the

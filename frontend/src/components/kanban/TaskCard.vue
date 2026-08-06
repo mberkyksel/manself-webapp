@@ -1,14 +1,68 @@
 <script setup>
-defineProps({
+import { usePointerDrag } from '../../composables/usePointerDrag.js';
+import { createGhost, moveGhost, removeGhost, findDropTarget } from '../../utils/dragGhost.js';
+import { useKanbanDrag } from '../../composables/useKanbanDrag.js';
+
+const props = defineProps({
   task: { type: Object, required: true },
   eventCount: { type: Number, default: 0 },
 });
 
-defineEmits(['dragstart', 'dragend', 'remove', 'update-due-date', 'sync-due-date']);
+const emit = defineEmits(['dragstart', 'dragend', 'remove', 'update-due-date', 'sync-due-date']);
+
+const { resolveDrop } = useKanbanDrag();
+
+let ghost = null;
+let grabOffset = { x: 0, y: 0 };
+let lastHoverEl = null;
+
+function clearHover() {
+  lastHoverEl?.classList.remove('kanban-drop-target');
+  lastHoverEl = null;
+}
+
+const { onPointerDown, isDragging } = usePointerDrag({
+  shouldIgnore: (event) => event.target.closest('input, button'),
+  onDragStart(event, { sourceElement }) {
+    emit('dragstart');
+    const created = createGhost(sourceElement);
+    ghost = created.ghost;
+    grabOffset = { x: event.clientX - created.rect.left, y: event.clientY - created.rect.top };
+    moveGhost(ghost, created.rect.left, created.rect.top);
+  },
+  onDragMove(event) {
+    moveGhost(ghost, event.clientX - grabOffset.x, event.clientY - grabOffset.y);
+    const target = findDropTarget(event.clientX, event.clientY, '[data-task-id], [data-column-status]');
+    if (target !== lastHoverEl) {
+      clearHover();
+      target?.classList.add('kanban-drop-target');
+      lastHoverEl = target;
+    }
+  },
+  onDragEnd(event) {
+    resolveDrop(event.clientX, event.clientY, props.task.id);
+    cleanup();
+  },
+  onDragCancel() {
+    cleanup();
+  },
+});
+
+function cleanup() {
+  removeGhost(ghost);
+  ghost = null;
+  clearHover();
+  emit('dragend');
+}
 </script>
 
 <template>
-  <div draggable="true" class="task-card" @dragstart="$emit('dragstart')" @dragend="$emit('dragend')">
+  <div
+    :data-task-id="task.id"
+    class="task-card"
+    :class="{ 'task-card--dragging': isDragging }"
+    @pointerdown="onPointerDown"
+  >
     <div class="task-card__header">
       <p class="task-card__title">{{ task.title }}</p>
       <button type="button" class="task-card__delete" aria-label="Delete task" @click="$emit('remove')">
@@ -54,6 +108,12 @@ defineEmits(['dragstart', 'dragend', 'remove', 'update-due-date', 'sync-due-date
 <style scoped>
 .task-card {
   @apply cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm active:cursor-grabbing;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.task-card--dragging {
+  @apply opacity-50;
 }
 .task-card__header {
   @apply flex items-start justify-between gap-2;
@@ -63,6 +123,7 @@ defineEmits(['dragstart', 'dragend', 'remove', 'update-due-date', 'sync-due-date
 }
 .task-card__delete {
   @apply shrink-0 text-slate-300 hover:text-rose-500;
+  touch-action: manipulation;
 }
 .task-card__description {
   @apply mt-1 line-clamp-2 text-xs text-slate-500;
@@ -87,8 +148,10 @@ defineEmits(['dragstart', 'dragend', 'remove', 'update-due-date', 'sync-due-date
 }
 .task-card__due-date {
   @apply rounded border-none bg-transparent text-xs text-slate-400 focus:outline-none;
+  touch-action: manipulation;
 }
 .task-card__sync {
   @apply shrink-0 text-xs text-slate-300 hover:text-indigo-600;
+  touch-action: manipulation;
 }
 </style>

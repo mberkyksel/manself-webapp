@@ -310,7 +310,7 @@ function onLogout() {
   @apply fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm;
 }
 .side-panel {
-  @apply fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-y-auto overflow-x-hidden border-r border-white/70 bg-white/70 p-5 shadow-[0_0_40px_-10px_rgba(30,41,59,0.35)] backdrop-blur-xl backdrop-saturate-150;
+  @apply fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col overflow-y-auto overflow-x-hidden border-r border-white/70 bg-white/70 p-5 shadow-[0_0_40px_-10px_rgba(30,41,59,0.35)] backdrop-blur-xl backdrop-saturate-150;
 }
 .side-panel__blob {
   @apply pointer-events-none absolute rounded-full opacity-40 blur-2xl;

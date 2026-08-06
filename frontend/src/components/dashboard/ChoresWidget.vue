@@ -13,6 +13,11 @@ import {
   Cog,
 } from '@lucide/vue';
 import { CHORE_TYPES, LAUNDRY_STATES, TRASH_STATES, MEAL_STATES, choreColorClass } from '../../constants/chores.js';
+import { usePointerDrag } from '../../composables/usePointerDrag.js';
+import { createGhost, moveGhost, removeGhost, findDropTarget } from '../../utils/dragGhost.js';
+import { useChoreStore } from '../../stores/choreStore.js';
+
+const choreStore = useChoreStore();
 
 const legendOpen = ref(false);
 
@@ -25,10 +30,62 @@ function cycleState(stateRef, states) {
   stateRef.value = states[nextIndex];
 }
 
-function onDragStart(event, type, state) {
-  event.dataTransfer.effectAllowed = 'copy';
-  event.dataTransfer.setData('application/json', JSON.stringify({ type, state: state ?? null }));
+// Lifts the ghost above a touch fingertip so it isn't hidden under the hand;
+// no-op for mouse/pen, which already show the ghost right where clicked.
+function pointerYOffset(event) {
+  return event.pointerType === 'touch' ? 48 : 0;
 }
+
+let ghost = null;
+let payload = null;
+let lastHoverEl = null;
+
+function clearHover() {
+  lastHoverEl?.classList.remove('calendar-day-cell--drop-target');
+  lastHoverEl = null;
+}
+
+function cleanup() {
+  removeGhost(ghost);
+  ghost = null;
+  clearHover();
+  payload = null;
+}
+
+const { onPointerDown: onIconPointerDown } = usePointerDrag({
+  onDragStart(event, { sourceElement }) {
+    payload = { type: sourceElement.dataset.choreType, state: sourceElement.dataset.choreState || null };
+    const created = createGhost(sourceElement);
+    ghost = created.ghost;
+    moveGhost(ghost, created.rect.left, created.rect.top - pointerYOffset(event));
+  },
+  onDragMove(event) {
+    const yOffset = pointerYOffset(event);
+    const rect = ghost.getBoundingClientRect();
+    moveGhost(ghost, event.clientX - rect.width / 2, event.clientY - rect.height / 2 - yOffset);
+    const target = findDropTarget(event.clientX, event.clientY - yOffset, '[data-date-key]');
+    if (target !== lastHoverEl) {
+      clearHover();
+      target?.classList.add('calendar-day-cell--drop-target');
+      lastHoverEl = target;
+    }
+  },
+  onDragEnd(event) {
+    const yOffset = pointerYOffset(event);
+    const target = findDropTarget(event.clientX, event.clientY - yOffset, '[data-date-key]');
+    if (target) {
+      choreStore.addChore(target.dataset.dateKey, {
+        id: crypto.randomUUID(),
+        type: payload.type,
+        state: payload.state,
+      });
+    }
+    cleanup();
+  },
+  onDragCancel() {
+    cleanup();
+  },
+});
 
 // Everyday chores, rendered as a 4-column icon grid.
 const primaryIcons = computed(() => [
@@ -138,12 +195,13 @@ const legendItems = [
           v-for="item in primaryIcons"
           :key="item.type"
           type="button"
-          draggable="true"
+          :data-chore-type="item.type"
+          :data-chore-state="item.state ?? ''"
           class="chores-widget__icon-btn"
           :class="choreColorClass({ type: item.type, state: item.state })"
           :title="item.title"
           @click="item.onClick && item.onClick()"
-          @dragstart="onDragStart($event, item.type, item.state)"
+          @pointerdown="onIconPointerDown"
         >
           <component :is="item.icon" :size="16" />
         </button>
@@ -158,11 +216,12 @@ const legendItems = [
           v-for="item in maintenanceIcons"
           :key="item.type"
           type="button"
-          draggable="true"
+          :data-chore-type="item.type"
+          :data-chore-state="item.state ?? ''"
           class="chores-widget__icon-btn"
           :class="choreColorClass({ type: item.type, state: item.state })"
           :title="item.title"
-          @dragstart="onDragStart($event, item.type, item.state)"
+          @pointerdown="onIconPointerDown"
         >
           <component :is="item.icon" :size="16" />
         </button>
@@ -188,8 +247,14 @@ const legendItems = [
 .chores-widget {
   /* Tailwind's amber-400 (#fbbf24 = rgb(251,191,36)) and amber-700 (#b45309)
      are exactly the colors called out in spec, so the opacity-modifier
-     utilities below hit those rgba() values precisely. */
-  @apply fixed right-4 top-12 z-50 w-64 rounded-2xl border border-amber-400/20 bg-amber-400/10;
+     utilities below hit those rgba() values precisely.
+     Mobile-first: normal document flow instead of floating over content
+     there's no room for it to float over; sm: and up restores the original
+     fixed, floating widget. mt-16 on mobile clears SidePanel's fixed
+     top-left trigger button (top-6, h-10), which would otherwise sit on
+     top of this widget's title since that trigger stays fixed regardless
+     of document flow. */
+  @apply relative mx-auto mb-6 mt-16 w-full max-w-xs rounded-2xl border border-amber-400/20 bg-amber-400/10 sm:fixed sm:right-4 sm:top-12 sm:z-50 sm:mx-0 sm:mb-0 sm:mt-0 sm:w-64;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow:
@@ -235,6 +300,9 @@ const legendItems = [
 }
 .chores-widget__icon-btn {
   @apply flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-full shadow-sm transition-transform duration-150 hover:scale-105 active:cursor-grabbing;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 .chores-widget__divider {
   @apply my-3 flex items-center gap-2;

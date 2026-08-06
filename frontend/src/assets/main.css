@@ -26,4 +26,10 @@
   .card-status {
     @apply bg-white p-4 text-sm;
   }
+
+  /* Used by src/utils/dragGhost.js for the touch/mouse drag preview that
+     follows the pointer during a kanban card or chore-icon drag. */
+  .drag-ghost {
+    @apply pointer-events-none fixed left-0 top-0 z-[9999] opacity-90;
+  }
 }
