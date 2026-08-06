@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { CircleUserRound, KeyRound, LogOut, Mail, Trash2, UserPen, X } from '@lucide/vue';
+import { KeyRound, LogOut, Mail, Trash2, UserPen, X } from '@lucide/vue';
 import { useUserStore } from '../../stores/userStore.js';
+import brandMark from '../../assets/brand/manself-mark-transparent.svg';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -148,7 +149,7 @@ function onLogout() {
 
 <template>
   <button type="button" class="side-panel-trigger" title="Open menu" @click="isOpen = true">
-    <CircleUserRound :size="20" />
+    <img :src="brandMark" alt="manself" class="side-panel-trigger__mark" />
   </button>
 
   <Transition
@@ -304,7 +305,10 @@ function onLogout() {
 
 <style scoped>
 .side-panel-trigger {
-  @apply fixed left-4 top-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/60 text-slate-600 shadow-[0_8px_24px_-8px_rgba(30,41,59,0.35)] backdrop-blur-xl backdrop-saturate-150 transition duration-200 hover:scale-110 hover:text-indigo-600;
+  @apply fixed left-4 top-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/60 shadow-[0_8px_24px_-8px_rgba(30,41,59,0.35)] backdrop-blur-xl backdrop-saturate-150 transition duration-200 hover:scale-110;
+}
+.side-panel-trigger__mark {
+  @apply h-6 w-6;
 }
 .side-panel-scrim {
   @apply fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm;

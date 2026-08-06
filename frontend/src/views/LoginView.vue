@@ -2,6 +2,8 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/userStore.js';
+import AppFooter from '../components/AppFooter.vue';
+import brandMark from '../assets/brand/manself-mark-transparent.svg';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -19,32 +21,48 @@ async function onSubmit() {
 
 <template>
   <main class="login-view">
-    <div class="login-view__panel">
-      <h1 class="login-view__title">Log in</h1>
-      <p class="login-view__subtitle">Welcome back.</p>
+    <div class="login-view__center">
+      <div class="login-view__panel">
+        <div class="login-view__heading">
+          <img :src="brandMark" alt="" class="login-view__logo" />
+          <h1 class="login-view__title">Log in</h1>
+        </div>
+        <p class="login-view__subtitle">Welcome back.</p>
 
-      <form class="login-view__form" @submit.prevent="onSubmit">
-        <input v-model="email" type="email" placeholder="Email" required class="login-view__input" />
-        <input v-model="password" type="password" placeholder="Password" required class="login-view__input" />
+        <form class="login-view__form" @submit.prevent="onSubmit">
+          <input v-model="email" type="email" placeholder="Email" required class="login-view__input" />
+          <input v-model="password" type="password" placeholder="Password" required class="login-view__input" />
 
-        <p v-if="userStore.error" class="login-view__error">{{ userStore.error }}</p>
+          <p v-if="userStore.error" class="login-view__error">{{ userStore.error }}</p>
 
-        <button type="submit" class="login-view__submit" :disabled="userStore.loading">
-          {{ userStore.loading ? 'Logging in...' : 'Log in' }}
-        </button>
-      </form>
+          <button type="submit" class="login-view__submit" :disabled="userStore.loading">
+            {{ userStore.loading ? 'Logging in...' : 'Log in' }}
+          </button>
+        </form>
 
-      <p class="login-view__footer">
-        Don't have an account?
-        <router-link to="/register" class="login-view__link">Register</router-link>
-      </p>
+        <p class="login-view__footer">
+          Don't have an account?
+          <router-link to="/register" class="login-view__link">Register</router-link>
+        </p>
+      </div>
     </div>
+
+    <AppFooter />
   </main>
 </template>
 
 <style scoped>
 .login-view {
-  @apply flex min-h-screen items-center justify-center bg-slate-100;
+  @apply flex min-h-screen flex-col bg-slate-100;
+}
+.login-view__center {
+  @apply flex flex-1 items-center justify-center;
+}
+.login-view__heading {
+  @apply flex items-center justify-center gap-2;
+}
+.login-view__logo {
+  @apply h-9 w-9;
 }
 .login-view__panel {
   @apply w-full max-w-sm text-center;
