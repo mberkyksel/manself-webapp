@@ -2,6 +2,8 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/userStore.js';
+import AppFooter from '../components/AppFooter.vue';
+import brandMark from '../assets/brand/manself-mark-transparent.svg';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -21,40 +23,56 @@ async function onSubmit() {
 
 <template>
   <main class="register-view">
-    <div class="register-view__panel">
-      <h1 class="register-view__title">Create an account</h1>
-      <p class="register-view__subtitle">Get started with your dashboard.</p>
+    <div class="register-view__center">
+      <div class="register-view__panel">
+        <div class="register-view__heading">
+          <img :src="brandMark" alt="" class="register-view__logo" />
+          <h1 class="register-view__title">Create an account</h1>
+        </div>
+        <p class="register-view__subtitle">Get started with your dashboard.</p>
 
-      <form class="register-view__form" @submit.prevent="onSubmit">
-        <input v-model="name" type="text" placeholder="Name" required class="register-view__input" />
-        <input v-model="email" type="email" placeholder="Email" required class="register-view__input" />
-        <input
-          v-model="password"
-          type="password"
-          placeholder="Password (min 8 characters)"
-          required
-          minlength="8"
-          class="register-view__input"
-        />
+        <form class="register-view__form" @submit.prevent="onSubmit">
+          <input v-model="name" type="text" placeholder="Name" required class="register-view__input" />
+          <input v-model="email" type="email" placeholder="Email" required class="register-view__input" />
+          <input
+            v-model="password"
+            type="password"
+            placeholder="Password (min 8 characters)"
+            required
+            minlength="8"
+            class="register-view__input"
+          />
 
-        <p v-if="userStore.error" class="register-view__error">{{ userStore.error }}</p>
+          <p v-if="userStore.error" class="register-view__error">{{ userStore.error }}</p>
 
-        <button type="submit" class="register-view__submit" :disabled="userStore.loading">
-          {{ userStore.loading ? 'Creating account...' : 'Create account' }}
-        </button>
-      </form>
+          <button type="submit" class="register-view__submit" :disabled="userStore.loading">
+            {{ userStore.loading ? 'Creating account...' : 'Create account' }}
+          </button>
+        </form>
 
-      <p class="register-view__footer">
-        Already have an account?
-        <router-link to="/login" class="register-view__link">Log in</router-link>
-      </p>
+        <p class="register-view__footer">
+          Already have an account?
+          <router-link to="/login" class="register-view__link">Log in</router-link>
+        </p>
+      </div>
     </div>
+
+    <AppFooter />
   </main>
 </template>
 
 <style scoped>
 .register-view {
-  @apply flex min-h-screen items-center justify-center bg-slate-100;
+  @apply flex min-h-screen flex-col bg-slate-100;
+}
+.register-view__center {
+  @apply flex flex-1 items-center justify-center;
+}
+.register-view__heading {
+  @apply flex items-center justify-center gap-2;
+}
+.register-view__logo {
+  @apply h-9 w-9;
 }
 .register-view__panel {
   @apply w-full max-w-sm text-center;
