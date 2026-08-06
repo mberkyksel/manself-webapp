@@ -87,7 +87,11 @@ function eventsFor(date) {
 }
 
 function choresFor(date) {
-  return choreStore.choresByDate[dateKey(date)] || [];
+  const chores = choreStore.choresByDate[dateKey(date)] || [];
+  return chores.map((chore) => ({
+    ...chore,
+    recurrence: chore.seriesId ? (choreStore.recurringSeries[chore.seriesId]?.recurrence ?? 'none') : 'none',
+  }));
 }
 
 function prevMonth() {
@@ -109,6 +113,9 @@ function toggleExpanded() {
 
 onMounted(calendarStore.fetchEvents);
 onMounted(taskStore.fetchTasks);
+// Catches date rollover across app sessions (e.g. reopening after a few
+// days away) so recurring series stay filled up to their window.
+onMounted(choreStore.materializeSeries);
 
 async function addEvent(payload) {
   try {
@@ -168,6 +175,7 @@ async function updateEvent(id, payload) {
         @drop-chore="choreStore.addChore(dateKey(date), $event)"
         @remove-chore="choreStore.removeChore(dateKey(date), $event)"
         @toggle-chore="choreStore.toggleChoreDone(dateKey(date), $event)"
+        @cycle-chore-recurrence="choreStore.cycleChoreRecurrence(dateKey(date), $event)"
       />
     </div>
 
@@ -193,6 +201,7 @@ async function updateEvent(id, payload) {
           @drop-chore="choreStore.addChore(dateKey(cell.date), $event)"
           @remove-chore="choreStore.removeChore(dateKey(cell.date), $event)"
           @toggle-chore="choreStore.toggleChoreDone(dateKey(cell.date), $event)"
+          @cycle-chore-recurrence="choreStore.cycleChoreRecurrence(dateKey(cell.date), $event)"
         />
       </div>
     </template>
