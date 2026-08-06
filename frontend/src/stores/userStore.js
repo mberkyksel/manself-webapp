@@ -92,6 +92,53 @@ export const useUserStore = defineStore('user', {
       }
     },
 
+    async updateProfile({ name }) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const { user } = await authService.updateProfile({ name });
+        this.user = user;
+        return true;
+      } catch (err) {
+        this.error = err.response?.data?.error?.message || 'Could not update profile.';
+        return false;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async updateEmail({ newEmail, currentPassword }) {
+      this.loading = true;
+      this.error = null;
+      try {
+        // A fresh token comes back too (the old one's email claim would
+        // otherwise go stale), so this re-runs setSession like login/register.
+        const { token, user } = await authService.updateEmail({ newEmail, currentPassword });
+        this.setSession(token, user);
+        return true;
+      } catch (err) {
+        this.error = err.response?.data?.error?.message || 'Could not update email.';
+        return false;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async deleteAccount({ currentPassword }) {
+      this.loading = true;
+      this.error = null;
+      try {
+        await authService.deleteAccount({ currentPassword });
+        this.clearSession();
+        return true;
+      } catch (err) {
+        this.error = err.response?.data?.error?.message || 'Could not delete account.';
+        return false;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     logout() {
       this.clearSession();
     },
