@@ -132,3 +132,91 @@ export async function updatePassword(req, res, next) {
     next(err);
   }
 }
+
+// Name is display-only (not a credential), so no password confirmation here -
+// see updateEmail/deleteAccount below for the fields that do require one.
+export async function updateProfile(req, res, next) {
+  try {
+    const { name } = req.body;
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+
+    if (!trimmedName) {
+      return res.status(400).json({ error: { message: 'name is required' } });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: { message: 'User not found' } });
+    }
+
+    user.name = trimmedName;
+    await user.save();
+
+    res.json({ user: toPublicUser(user) });
+  } catch (err) {
+    if (err.name === 'SequelizeValidationError') {
+      return res.status(400).json({ error: { message: err.errors?.[0]?.message || 'Invalid input' } });
+    }
+    next(err);
+  }
+}
+
+// Email doubles as the login identifier, so changing it requires the current
+// password - same reasoning as updatePassword (and same 403, not 401, to
+// avoid tripping the frontend's "401 = expired session" interceptor).
+export async function updateEmail(req, res, next) {
+  try {
+    const { newEmail, currentPassword } = req.body;
+
+    if (!newEmail || !currentPassword) {
+      return res.status(400).json({ error: { message: 'newEmail and currentPassword are required' } });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      return res.status(403).json({ error: { message: 'Current password is incorrect' } });
+    }
+
+    const existing = await User.findOne({ where: { email: newEmail } });
+    if (existing && existing.id !== user.id) {
+      return res.status(409).json({ error: { message: 'Email is already registered' } });
+    }
+
+    user.email = newEmail;
+    await user.save();
+
+    // Re-issue the token so its embedded email claim matches the new value
+    // instead of going stale until the old token expires.
+    res.json({ token: signToken(user), user: toPublicUser(user) });
+  } catch (err) {
+    if (err.name === 'SequelizeValidationError' || err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ error: { message: err.errors?.[0]?.message || 'Invalid input' } });
+    }
+    next(err);
+  }
+}
+
+// Irreversible, so it requires the current password like updateEmail. Owned
+// rows (boards, tasks, calendar events, notes) all have ON DELETE CASCADE
+// foreign keys to users (see the migrations), so destroying the user is
+// enough - no manual cleanup needed.
+export async function deleteAccount(req, res, next) {
+  try {
+    const { currentPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ error: { message: 'currentPassword is required' } });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      return res.status(403).json({ error: { message: 'Current password is incorrect' } });
+    }
+
+    await user.destroy();
+
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
