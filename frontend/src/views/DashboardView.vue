@@ -10,6 +10,7 @@ import KanbanBoard from '../components/kanban/KanbanBoard.vue';
 import StickyNotesManager from '../components/dashboard/StickyNotesManager.vue';
 import TodayTodoTable from '../components/dashboard/TodayTodoTable.vue';
 import TodayChores from '../components/dashboard/TodayChores.vue';
+import ChoresCelebration from '../components/dashboard/ChoresCelebration.vue';
 import AppFooter from '../components/AppFooter.vue';
 
 // WelcomeBanner and ChoresWidget are siblings here, so the open/closed state
@@ -54,6 +55,7 @@ const isChoresWidgetOpen = ref(true);
     </div>
 
     <StickyNotesManager />
+    <ChoresCelebration />
 
     <AppFooter />
   </main>
