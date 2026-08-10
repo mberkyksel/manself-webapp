@@ -5,7 +5,6 @@ import { useUserStore } from '../../stores/userStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useCalendarStore } from '../../stores/calendarStore.js';
 import { useChoreStore } from '../../stores/choreStore.js';
-import ChoreBadge from './ChoreBadge.vue';
 
 defineProps({
   choresOpen: { type: Boolean, default: false },
@@ -45,6 +44,7 @@ const todosToday = computed(
 );
 
 const todaysChores = computed(() => choreStore.choresByDate[todayDateOnly.value] || []);
+const doneChoresCount = computed(() => todaysChores.value.filter((chore) => chore.isDone).length);
 
 onMounted(() => {
   taskStore.fetchTasks();
@@ -71,7 +71,7 @@ onMounted(() => {
       <span class="welcome-banner__stat">📅 {{ eventsToday }} event{{ eventsToday === 1 ? '' : 's' }} </span>
       <span class="welcome-banner__stat">✓ {{ todosToday }} todo{{ todosToday === 1 ? '' : 's' }} </span>
       <span v-if="todaysChores.length" class="welcome-banner__stat welcome-banner__stat--chores">
-        🧹 {{ todaysChores.length }} house dut{{ todaysChores.length === 1 ? 'y' : 'ies' }}
+        🧹 {{ doneChoresCount }}/{{ todaysChores.length }} house dut{{ todaysChores.length === 1 ? 'y' : 'ies' }}
       </span>
     </div>
   </div>
