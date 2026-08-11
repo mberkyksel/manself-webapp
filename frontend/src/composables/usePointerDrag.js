@@ -33,12 +33,19 @@ export function usePointerDrag({
   // Installed only once a real drag is detected, so a plain tap never pays
   // this cost and never risks swallowing its own click handler.
   function suppressTrailingClick() {
+    // Snapshot the element now: reset() nulls out the outer `sourceElement`
+    // synchronously in onPointerUp, before the browser's trailing 'click'
+    // (and this listener) actually fires. Reading the closure variable
+    // instead of this snapshot would make the cleanup below a no-op,
+    // leaving the listener permanently attached and swallowing every future
+    // click on this element, not just the one right after the drag.
+    const target = sourceElement;
     function onClick(event) {
       event.stopPropagation();
       event.preventDefault();
-      sourceElement?.removeEventListener('click', onClick, true);
+      target?.removeEventListener('click', onClick, true);
     }
-    sourceElement?.addEventListener('click', onClick, true);
+    target?.addEventListener('click', onClick, true);
   }
 
   function attachWindowListeners() {
