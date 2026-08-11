@@ -32,8 +32,8 @@ function recurrenceHint() {
     @dblclick="onBadgeDoubleClick"
     @contextmenu.prevent="emit('cycle-recurrence', chore.id)"
   >
+    <component :is="choreIcon(chore.type)" :size="size === 'md' ? 16 : 11" />
     <span v-if="chore.isDone" class="chore-badge__check" aria-hidden="true">✅</span>
-    <component :is="choreIcon(chore.type)" v-else :size="size === 'md' ? 16 : 11" />
     <span
       v-if="chore.recurrence && chore.recurrence !== 'none'"
       class="chore-badge__repeat"
@@ -58,13 +58,15 @@ function recurrenceHint() {
   @apply bg-emerald-100 ring-1 ring-inset ring-emerald-300;
 }
 .chore-badge__check {
-  line-height: 1;
-}
-.chore-badge--sm .chore-badge__check {
-  font-size: 9px;
+  /* Corner badge like .chore-badge__repeat below, rather than replacing or
+     overlaying the icon, so a completed chore is still identifiable by its
+     type at a glance instead of only via the hover tooltip. Opposite corner
+     from the repeat badge so a recurring, completed chore shows both. */
+  @apply absolute -top-1 -right-1 leading-none;
+  font-size: 8px;
 }
 .chore-badge--md .chore-badge__check {
-  font-size: 15px;
+  font-size: 11px;
 }
 .chore-badge {
   position: relative;
