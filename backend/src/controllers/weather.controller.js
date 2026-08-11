@@ -3,17 +3,31 @@ import { env } from '../config/env.js';
 const OPENWEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather';
 
 // OpenWeatherMap's free tier caps out well below what unlimited traffic
-// would need, so we budget a fixed number of real calls per day and serve
-// the most recent successful response for anything beyond that instead of
-// erroring out. State is in-memory (single process) - acceptable for this
-// single-instance app, but it resets on restart, and a multi-instance
-// deployment would need a shared store (e.g. Redis) to enforce one true
-// shared budget.
+// would need, so we budget a fixed number of real calls per day (shared
+// across all locations - that's a genuinely global resource) and serve
+// each location's own most recent successful response for anything beyond
+// that instead of erroring out. State is in-memory (single process) -
+// acceptable for this single-instance app, but it resets on restart, and a
+// multi-instance deployment would need a shared store (e.g. Redis) to
+// enforce one true shared budget.
 const MAX_CALLS_PER_DAY = 100;
+
+// Cache key precision: ~1.1km at the equator - tight enough that weather
+// doesn't meaningfully vary within it, but loose enough to coalesce the
+// sub-meter jitter between repeated geolocation reads from the same spot
+// into the same slot.
+const CACHE_KEY_PRECISION = 2;
 
 let callCount = 0;
 let callCountDate = utcDateKey();
-let lastResponse = null;
+// Keyed by rounded "lat,lon" so the quota-exhaustion / error fallback below
+// serves each requester's own last-known-good weather instead of whichever
+// location happened to be fetched most recently for a different request.
+const lastResponseByLocation = new Map();
+
+function locationKey(lat, lon) {
+  return `${Number(lat).toFixed(CACHE_KEY_PRECISION)},${Number(lon).toFixed(CACHE_KEY_PRECISION)}`;
+}
 
 // Calendar day in UTC, not server-local time, so the daily reset is the
 // same instant regardless of which timezone the host machine happens to be
@@ -69,31 +83,35 @@ async function fetchFromOpenWeather(lat, lon) {
 }
 
 export async function getCurrentWeather(req, res, next) {
+  const { lat, lon } = req.query;
+  if (!lat || !lon) {
+    return res.status(400).json({ error: { message: 'lat and lon are required' } });
+  }
+  const key = locationKey(lat, lon);
+
   try {
     resetDailyCounterIfNeeded();
 
-    const { lat, lon } = req.query;
-    if (!lat || !lon) {
-      return res.status(400).json({ error: { message: 'lat and lon are required' } });
-    }
-
     if (callCount >= MAX_CALLS_PER_DAY) {
-      if (lastResponse) {
-        return res.json(lastResponse);
+      const cached = lastResponseByLocation.get(key);
+      if (cached) {
+        return res.json(cached);
       }
       return res.status(503).json({
-        error: { message: 'Daily weather API quota reached and no cached response is available yet' },
+        error: { message: 'Daily weather API quota reached and no cached response is available yet for this location' },
       });
     }
 
-    lastResponse = await fetchFromOpenWeather(lat, lon);
-    res.json(lastResponse);
+    const result = await fetchFromOpenWeather(lat, lon);
+    lastResponseByLocation.set(key, result);
+    res.json(result);
   } catch (err) {
-    // Prefer serving the last known-good response over a hard failure,
-    // whether the call above failed because we're out of budget or for any
-    // other reason (network blip, upstream error, etc).
-    if (lastResponse) {
-      return res.json(lastResponse);
+    // Prefer serving this location's last known-good response over a hard
+    // failure, whether the call above failed because we're out of budget or
+    // for any other reason (network blip, upstream error, etc).
+    const cached = lastResponseByLocation.get(key);
+    if (cached) {
+      return res.json(cached);
     }
     next(err);
   }
