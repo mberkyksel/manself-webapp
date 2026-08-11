@@ -58,23 +58,15 @@ function recurrenceHint() {
   @apply bg-emerald-100 ring-1 ring-inset ring-emerald-300;
 }
 .chore-badge__check {
-  /* Overlaid on top of the icon rather than replacing it, so a completed
-     chore is still identifiable by its type at a glance instead of only
-     via the hover tooltip - the reduced opacity lets the icon show through. */
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  opacity: 0.75;
-  pointer-events: none;
-}
-.chore-badge--sm .chore-badge__check {
-  font-size: 9px;
+  /* Corner badge like .chore-badge__repeat below, rather than replacing or
+     overlaying the icon, so a completed chore is still identifiable by its
+     type at a glance instead of only via the hover tooltip. Opposite corner
+     from the repeat badge so a recurring, completed chore shows both. */
+  @apply absolute -top-1 -right-1 leading-none;
+  font-size: 8px;
 }
 .chore-badge--md .chore-badge__check {
-  font-size: 15px;
+  font-size: 11px;
 }
 .chore-badge {
   position: relative;
