@@ -53,6 +53,14 @@ function cleanup() {
 }
 
 const { onPointerDown: onIconPointerDown } = usePointerDrag({
+  // usePointerDrag's default 8px threshold is too tight for icons that are
+  // also click-to-cycle (Laundry/Trash/Meals): ordinary mouse/trackpad
+  // jitter on a plain click easily exceeds 8px, which misfires this as a
+  // drag attempt - and since it doesn't land on a drop target, nothing gets
+  // scheduled while the trailing click still gets suppressed, so the color
+  // cycle silently never fires. A larger threshold absorbs that jitter
+  // without meaningfully delaying a real drag-to-schedule gesture.
+  threshold: 16,
   onDragStart(event, { sourceElement }) {
     payload = { type: sourceElement.dataset.choreType, state: sourceElement.dataset.choreState || null };
     const created = createGhost(sourceElement);

@@ -10,6 +10,11 @@ export function createGhost(sourceEl, { className } = {}) {
   if (className) ghost.classList.add(className);
   ghost.style.width = `${rect.width}px`;
   ghost.style.height = `${rect.height}px`;
+  // Cloning copies the source's own classes too (e.g. chore icons carry a
+  // hover transition-transform for their bounce effect) - inline-override it
+  // so moveGhost's per-frame transform updates apply instantly instead of
+  // each one easing in behind the pointer.
+  ghost.style.transition = 'none';
   document.body.appendChild(ghost);
   return { ghost, rect };
 }
