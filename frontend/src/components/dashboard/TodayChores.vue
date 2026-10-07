@@ -23,7 +23,9 @@ const doneChoresCount = computed(() => todaysChores.value.filter((chore) => chor
       <span class="today-chores__count">{{ doneChoresCount }}/{{ todaysChores.length }}</span>
     </div>
 
-    <p v-if="todaysChores.length === 0" class="today-chores__empty">No chores scheduled today.</p>
+    <p v-if="todaysChores.length === 0" class="today-chores__empty">
+      No chores scheduled today. Drag one from the Home Widget onto a day in the calendar.
+    </p>
 
     <div v-else class="today-chores__row">
       <ChoreBadge

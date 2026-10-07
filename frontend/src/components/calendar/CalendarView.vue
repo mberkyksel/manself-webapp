@@ -154,7 +154,7 @@ async function updateEvent(id, payload) {
   <div class="calendar-view">
     <div class="calendar-view__header">
       <h2 class="calendar-view__title">
-        {{ isExpanded ? monthLabel : 'Next 1O days' }}
+        {{ isExpanded ? monthLabel : 'Next 10 days' }}
       </h2>
 
       <div class="calendar-view__nav">

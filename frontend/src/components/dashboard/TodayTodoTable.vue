@@ -50,7 +50,9 @@ onMounted(() => {
       <span class="today-todos__count">{{ todosToday.length }}</span>
     </div>
 
-    <p v-if="todosToday.length === 0" class="today-todos__empty">Nothing due today.</p>
+    <p v-if="todosToday.length === 0" class="today-todos__empty">
+      Nothing due today. Give a task a due date on the board below and it will show up here.
+    </p>
 
     <table v-else class="today-todos__table">
       <thead>

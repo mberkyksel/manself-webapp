@@ -44,7 +44,13 @@ function resetDailyCounterIfNeeded() {
   }
 }
 
-async function fetchFromOpenWeather(lat, lon) {
+// A place is either coordinates or a city name (the fallback when the
+// browser won't share its location).
+function cityKey(city) {
+  return `city:${city.trim().toLowerCase()}`;
+}
+
+async function fetchFromOpenWeather({ lat, lon, city }) {
   if (!env.weatherApiKey) {
     const err = new Error('Weather API key is not configured');
     err.status = 503;
@@ -52,8 +58,12 @@ async function fetchFromOpenWeather(lat, lon) {
   }
 
   const url = new URL(OPENWEATHER_URL);
-  url.searchParams.set('lat', lat);
-  url.searchParams.set('lon', lon);
+  if (city) {
+    url.searchParams.set('q', city);
+  } else {
+    url.searchParams.set('lat', lat);
+    url.searchParams.set('lon', lon);
+  }
   url.searchParams.set('units', 'metric');
   url.searchParams.set('appid', env.weatherApiKey);
 
@@ -65,8 +75,12 @@ async function fetchFromOpenWeather(lat, lon) {
   const data = await response.json();
 
   if (!response.ok) {
-    const err = new Error(data.message || 'Weather lookup failed');
-    err.status = response.status;
+    // Our own API key being rejected is a server problem, not the visitor's
+    // session expiring - and the client logs out on any 401.
+    const err = new Error(
+      response.status === 401 || response.status === 403 ? 'Weather service is unavailable' : data.message || 'Weather lookup failed'
+    );
+    err.status = response.status === 401 || response.status === 403 ? 503 : response.status;
     throw err;
   }
 
@@ -84,10 +98,14 @@ async function fetchFromOpenWeather(lat, lon) {
 
 export async function getCurrentWeather(req, res, next) {
   const { lat, lon } = req.query;
-  if (!lat || !lon) {
-    return res.status(400).json({ error: { message: 'lat and lon are required' } });
+  const city = typeof req.query.city === 'string' ? req.query.city.trim() : '';
+  if (!city && (!lat || !lon)) {
+    return res.status(400).json({ error: { message: 'lat and lon, or a city, are required' } });
   }
-  const key = locationKey(lat, lon);
+  if (city.length > 100) {
+    return res.status(400).json({ error: { message: 'city is too long' } });
+  }
+  const key = city ? cityKey(city) : locationKey(lat, lon);
 
   try {
     resetDailyCounterIfNeeded();
@@ -102,7 +120,7 @@ export async function getCurrentWeather(req, res, next) {
       });
     }
 
-    const result = await fetchFromOpenWeather(lat, lon);
+    const result = await fetchFromOpenWeather({ lat, lon, city });
     lastResponseByLocation.set(key, result);
     res.json(result);
   } catch (err) {

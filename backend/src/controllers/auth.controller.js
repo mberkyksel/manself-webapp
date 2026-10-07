@@ -166,11 +166,29 @@ export async function updatePassword(req, res, next) {
 // see updateEmail/deleteAccount below for the fields that do require one.
 export async function updateProfile(req, res, next) {
   try {
-    const { name } = req.body;
-    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const { name, location } = req.body;
+    const updates = {};
 
-    if (!trimmedName) {
-      return res.status(400).json({ error: { message: 'name is required' } });
+    if (name !== undefined) {
+      const trimmedName = typeof name === 'string' ? name.trim() : '';
+      if (!trimmedName) {
+        return res.status(400).json({ error: { message: 'name is required' } });
+      }
+      updates.name = trimmedName;
+    }
+
+    // The place used for weather when the browser won't share its location;
+    // an empty value clears it.
+    if (location !== undefined) {
+      const trimmedLocation = typeof location === 'string' ? location.trim() : null;
+      if (trimmedLocation === null || trimmedLocation.length > 100) {
+        return res.status(400).json({ error: { message: 'location must be text of at most 100 characters' } });
+      }
+      updates.location = trimmedLocation || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: { message: 'name or location is required' } });
     }
 
     const user = await User.findByPk(req.user.id);
@@ -178,7 +196,7 @@ export async function updateProfile(req, res, next) {
       return res.status(404).json({ error: { message: 'User not found' } });
     }
 
-    user.name = trimmedName;
+    Object.assign(user, updates);
     await user.save();
 
     res.json({ user: toPublicUser(user) });

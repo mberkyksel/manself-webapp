@@ -102,7 +102,7 @@ See `frontend/src/` and `backend/src/` for the full module layout (components, c
 End-to-end functional, not just a skeleton:
 
 - **Auth**: register, login, a settings page (`/app/settings`) to update name/email/password and delete the account (all destructive/credential-changing actions require the current password), session-expiry handling (expired/invalid tokens redirect to login instead of failing silently)
-- **Dashboard**: welcome banner, clock, weather (geolocation + daily-quota API), branded favicon/wordmark, copyright footer
+- **Dashboard**: welcome banner, clock, weather (browser geolocation, falling back to a saved city or a default; daily-quota API), branded favicon/wordmark, copyright footer
 - **Calendar**: compact and full-month views, event CRUD, optional task linking
 - **Kanban board**: task CRUD, drag-and-drop reordering across columns (mouse and touch, via Pointer Events)
 - **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
