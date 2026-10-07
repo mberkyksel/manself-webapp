@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/userStore.js';
 import AppFooter from '../components/AppFooter.vue';
+import DemoLoginButton from '../components/DemoLoginButton.vue';
 import brandMark from '../assets/brand/manself-mark-transparent.svg';
 
 const userStore = useUserStore();
@@ -49,6 +50,8 @@ async function onSubmit() {
             {{ userStore.loading ? 'Creating account...' : 'Create account' }}
           </button>
         </form>
+
+        <DemoLoginButton />
 
         <p class="register-view__footer">
           Already have an account?

@@ -34,6 +34,15 @@ const colorClasses = { yellow: 'bg-amber-100', cyan: 'bg-cyan-100', green: 'bg-e
 // the store (and persisted) on drag end.
 const position = reactive({ x: props.note.positionX, y: props.note.positionY });
 
+// clientWidth/Height, not innerWidth/Height: the latter include the page
+// scrollbar, which would let a note end up partly underneath it.
+function viewportWidth() {
+  return document.documentElement.clientWidth;
+}
+function viewportHeight() {
+  return document.documentElement.clientHeight;
+}
+
 function clamp(value, max) {
   return Math.min(Math.max(value, 0), Math.max(max, 0));
 }
@@ -46,8 +55,8 @@ function clamp(value, max) {
 // the note returns to its "true" spot if the viewport widens again later.
 function syncPosition() {
   if (isDragging.value) return;
-  position.x = clamp(props.note.positionX, window.innerWidth - NOTE_SIZE);
-  position.y = clamp(props.note.positionY, window.innerHeight - NOTE_SIZE);
+  position.x = clamp(props.note.positionX, viewportWidth() - NOTE_SIZE);
+  position.y = clamp(props.note.positionY, viewportHeight() - NOTE_SIZE);
 }
 
 watch(() => [props.note.positionX, props.note.positionY], syncPosition);
@@ -65,8 +74,8 @@ const { onPointerDown: startDrag, isDragging } = usePointerDrag({
     dragOffset = { x: event.clientX - position.x, y: event.clientY - position.y };
   },
   onDragMove(event) {
-    position.x = clamp(event.clientX - dragOffset.x, window.innerWidth - NOTE_SIZE);
-    position.y = clamp(event.clientY - dragOffset.y, window.innerHeight - NOTE_SIZE);
+    position.x = clamp(event.clientX - dragOffset.x, viewportWidth() - NOTE_SIZE);
+    position.y = clamp(event.clientY - dragOffset.y, viewportHeight() - NOTE_SIZE);
   },
   onDragEnd() {
     emit('move', { x: position.x, y: position.y });

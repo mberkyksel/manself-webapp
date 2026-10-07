@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { CHORE_TYPES } from '../constants/chores.js';
 
 const STORAGE_KEY = 'manself:chores';
 
@@ -73,6 +74,47 @@ export const useChoreStore = defineStore('chore', {
         [dateKey]: existing.map((c) => (c.id === choreId ? { ...c, isDone: !c.isDone } : c)),
       };
       this.persist();
+    },
+
+    // Chores only live in this browser (localStorage), so unlike tasks/events/
+    // notes the server can't seed them for the demo account - the demo login
+    // calls this instead. Today is deliberately one chore short of done, so
+    // finishing the last one shows off the celebration.
+    loadDemoChores() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const keyFor = (offset) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() + offset);
+        return toDateKey(d);
+      };
+      const chore = (type, { state = null, isDone = false } = {}) => ({
+        id: crypto.randomUUID(),
+        type,
+        state,
+        isDone,
+        seriesId: null,
+      });
+
+      this.choresByDate = {
+        [keyFor(0)]: [
+          chore(CHORE_TYPES.SWEEP, { isDone: true }),
+          chore(CHORE_TYPES.GROCERIES, { isDone: true }),
+          chore(CHORE_TYPES.LAUNDRY, { state: 'colors' }),
+        ],
+        [keyFor(1)]: [chore(CHORE_TYPES.PLANTS)],
+        [keyFor(2)]: [chore(CHORE_TYPES.MOP)],
+        [keyFor(3)]: [chore(CHORE_TYPES.MEALS, { state: 'prep' })],
+      };
+      this.recurringSeries = {
+        [crypto.randomUUID()]: {
+          type: CHORE_TYPES.TRASH,
+          state: 'grey',
+          recurrence: 'weekly',
+          anchorDateKey: keyFor(2),
+        },
+      };
+      this.materializeSeries();
     },
 
     // Cycles a chore's repeat rule: none -> daily -> weekly -> none. Turning

@@ -19,6 +19,10 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
 
+  // Enables POST /api/auth/demo, which resets and logs into the shared demo
+  // account. Off unless explicitly turned on.
+  demoMode: process.env.DEMO_MODE === 'true',
+
   // Reserved for future integrations, wired up as those features land.
   weatherApiKey: process.env.WEATHER_API_KEY || null,
   googleClientId: process.env.GOOGLE_CLIENT_ID || null,
