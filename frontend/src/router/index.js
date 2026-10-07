@@ -4,6 +4,7 @@ import AppLayout from '../layouts/AppLayout.vue';
 import LandingView from '../views/LandingView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import DashboardView from '../views/DashboardView.vue';
+import SettingsView from '../views/SettingsView.vue';
 import LoginView from '../views/LoginView.vue';
 import RegisterView from '../views/RegisterView.vue';
 import { useUserStore } from '../stores/userStore.js';
@@ -26,7 +27,10 @@ const routes = [
     path: '/app',
     component: AppLayout,
     meta: { requiresAuth: true },
-    children: [{ path: '', name: 'dashboard', component: DashboardView, meta: { title: 'Dashboard' } }],
+    children: [
+      { path: '', name: 'dashboard', component: DashboardView, meta: { title: 'Dashboard' } },
+      { path: 'settings', name: 'settings', component: SettingsView, meta: { title: 'Settings' } },
+    ],
   },
 
   // Anything unmatched, including unknown paths under /app.

@@ -39,6 +39,30 @@
     @apply bg-white p-4 text-sm;
   }
 
+  /* Form controls shared by the settings page (and available to any new
+     form). Login/register keep their own scoped copies for now. */
+  .field-input {
+    @apply w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400;
+  }
+  .btn-primary {
+    @apply rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .settings-form {
+    @apply flex flex-col gap-3;
+  }
+  .settings-form__label {
+    @apply flex flex-col gap-1 text-xs font-medium text-slate-600;
+  }
+  .settings-form__error {
+    @apply rounded-lg bg-rose-50 p-2 text-sm text-rose-600;
+  }
+  .settings-form__submit {
+    @apply self-start;
+  }
+  .btn-danger {
+    @apply rounded-md bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
   /* Used by src/utils/dragGhost.js for the touch/mouse drag preview that
      follows the pointer during a kanban card or chore-icon drag. */
   .drag-ghost {
