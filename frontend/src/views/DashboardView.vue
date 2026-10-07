@@ -4,14 +4,12 @@ import WelcomeBanner from '../components/dashboard/WelcomeBanner.vue';
 import WeatherWidget from '../components/dashboard/WeatherWidget.vue';
 import ClockWidget from '../components/dashboard/ClockWidget.vue';
 import ChoresWidget from '../components/dashboard/ChoresWidget.vue';
-import SidePanel from '../components/dashboard/SidePanel.vue';
 import CalendarView from '../components/calendar/CalendarView.vue';
 import KanbanBoard from '../components/kanban/KanbanBoard.vue';
 import StickyNotesManager from '../components/dashboard/StickyNotesManager.vue';
 import TodayTodoTable from '../components/dashboard/TodayTodoTable.vue';
 import TodayChores from '../components/dashboard/TodayChores.vue';
 import ChoresCelebration from '../components/dashboard/ChoresCelebration.vue';
-import AppFooter from '../components/AppFooter.vue';
 
 // WelcomeBanner and ChoresWidget are siblings here, so the open/closed state
 // lives in this common parent and flows down as a prop / up as an event.
@@ -20,8 +18,6 @@ const isChoresWidgetOpen = ref(true);
 
 <template>
   <main class="dashboard-view">
-    <SidePanel />
-
     <Transition
       enter-active-class="transition ease-out duration-200"
       enter-from-class="transform opacity-0 scale-95"
@@ -56,14 +52,12 @@ const isChoresWidgetOpen = ref(true);
 
     <StickyNotesManager />
     <ChoresCelebration />
-
-    <AppFooter />
   </main>
 </template>
 
 <style scoped>
 .dashboard-view {
-  @apply min-h-screen bg-slate-100 px-6 py-8;
+  @apply flex-1 px-6 py-8;
 }
 .dashboard-view__calendar {
   @apply mx-auto max-w-5xl;

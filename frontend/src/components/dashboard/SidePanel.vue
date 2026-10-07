@@ -135,7 +135,7 @@ async function onDeleteAccount() {
 
   const ok = await userStore.deleteAccount({ currentPassword: deletePassword.value });
   if (ok) {
-    router.push({ name: 'login' });
+    router.push({ name: 'landing' });
   } else {
     deleteFormError.value = userStore.error;
   }
@@ -143,7 +143,7 @@ async function onDeleteAccount() {
 
 function onLogout() {
   userStore.logout();
-  router.push({ name: 'login' });
+  router.push({ name: 'landing' });
 }
 </script>
 

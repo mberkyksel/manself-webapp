@@ -57,6 +57,9 @@ async function onSubmit() {
           Already have an account?
           <router-link to="/login" class="register-view__link">Log in</router-link>
         </p>
+        <p class="register-view__back">
+          <router-link :to="{ name: 'landing' }" class="register-view__link">&larr; Back to home</router-link>
+        </p>
       </div>
     </div>
 
@@ -100,6 +103,9 @@ async function onSubmit() {
 }
 .register-view__footer {
   @apply mt-4 text-sm text-slate-500;
+}
+.register-view__back {
+  @apply mt-3 text-xs;
 }
 .register-view__link {
   @apply font-medium text-slate-700 hover:underline;
