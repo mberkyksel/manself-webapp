@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { taskService } from '../services/taskService.js';
 import { useCalendarStore } from './calendarStore.js';
+import { useToast } from '../composables/useToast.js';
 
 export const useTaskStore = defineStore('task', {
   state: () => ({
@@ -64,6 +65,7 @@ export const useTaskStore = defineStore('task', {
       } catch (err) {
         Object.assign(task, previous);
         console.error(err);
+        useToast().error("Couldn't save that change, so it was reverted.", { key: 'task-save-failed' });
       }
     },
 
@@ -92,11 +94,14 @@ export const useTaskStore = defineStore('task', {
       try {
         if (existing) {
           await calendarStore.updateEvent(existing.id, payload);
+          useToast().success('Calendar event updated.');
         } else {
           await calendarStore.addEvent(payload);
+          useToast().success('Added to your calendar.');
         }
       } catch (err) {
         console.error(err);
+        useToast().error("Couldn't add this to your calendar.", { key: 'task-calendar-sync-failed' });
       }
     },
 
@@ -105,9 +110,11 @@ export const useTaskStore = defineStore('task', {
       this.tasks = this.tasks.filter((task) => task.id !== id);
       try {
         await taskService.remove(id);
+        useToast().success('Task deleted.');
       } catch (err) {
         this.tasks = previous;
         console.error(err);
+        useToast().error("Couldn't delete the task, so it was put back.", { key: 'task-delete-failed' });
       }
     },
 
@@ -144,6 +151,7 @@ export const useTaskStore = defineStore('task', {
         task.status = previousStatus;
         task.position = previousPosition;
         console.error(err);
+        useToast().error("Couldn't move the task, so it was put back.", { key: 'task-save-failed' });
       }
     },
   },

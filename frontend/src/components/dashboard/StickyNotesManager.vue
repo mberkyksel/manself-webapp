@@ -2,8 +2,10 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import StickyNote from './StickyNote.vue';
 import { useNoteStore } from '../../stores/noteStore.js';
+import { useConfirm } from '../../composables/useConfirm.js';
 
 const noteStore = useNoteStore();
+const { confirm } = useConfirm();
 
 // Free-floating positioned notes don't fit a phone screen - below Tailwind's
 // sm breakpoint (640px, unmodified default) notes render as a stacked list
@@ -14,6 +16,19 @@ let mql = null;
 
 function updateIsMobile(event) {
   isMobile.value = event.matches;
+}
+
+// An empty note has nothing to lose, so it goes without asking.
+async function requestRemoveNote(note) {
+  const hasText = note.text?.trim().length > 0;
+  const confirmed =
+    !hasText ||
+    (await confirm({
+      title: 'Delete this note?',
+      message: 'The note and what you wrote on it will be permanently deleted.',
+      confirmLabel: 'Delete note',
+    }));
+  if (confirmed) noteStore.removeNote(note.id);
 }
 
 onMounted(() => {
@@ -48,7 +63,7 @@ onUnmounted(() => mql?.removeEventListener('change', updateIsMobile));
         @move="({ x, y }) => noteStore.updateNote(note.id, { positionX: x, positionY: y })"
         @update-text="(text) => noteStore.updateNote(note.id, { text })"
         @update-color="(color) => noteStore.updateNote(note.id, { color })"
-        @delete="noteStore.removeNote(note.id)"
+        @delete="requestRemoveNote(note)"
       />
     </div>
 
@@ -105,7 +120,7 @@ onUnmounted(() => mql?.removeEventListener('change', updateIsMobile));
               stacked
               @update-text="(text) => noteStore.updateNote(note.id, { text })"
               @update-color="(color) => noteStore.updateNote(note.id, { color })"
-              @delete="noteStore.removeNote(note.id)"
+              @delete="requestRemoveNote(note)"
             />
           </div>
         </div>

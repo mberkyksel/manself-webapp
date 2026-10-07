@@ -2,8 +2,10 @@
 import { computed } from 'vue';
 import { useChoreStore } from '../../stores/choreStore.js';
 import ChoreBadge from './ChoreBadge.vue';
+import { useChoreRemoval } from '../../composables/useChoreRemoval.js';
 
 const choreStore = useChoreStore();
+const { removeChoreWithUndo } = useChoreRemoval();
 
 const todayDateOnly = computed(() => {
   const now = new Date();
@@ -30,7 +32,7 @@ const doneChoresCount = computed(() => todaysChores.value.filter((chore) => chor
         :chore="chore"
         size="md"
         @toggle="choreStore.toggleChoreDone(todayDateOnly, $event)"
-        @delete="choreStore.removeChore(todayDateOnly, $event)"
+        @delete="removeChoreWithUndo(todayDateOnly, $event)"
         @cycle-recurrence="choreStore.cycleChoreRecurrence(todayDateOnly, $event)"
       />
     </div>

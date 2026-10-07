@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import TaskCard from './TaskCard.vue';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useCalendarStore } from '../../stores/calendarStore.js';
+import { useConfirm } from '../../composables/useConfirm.js';
 
 const props = defineProps({
   status: { type: String, required: true },
@@ -11,6 +12,7 @@ const props = defineProps({
 });
 
 const taskStore = useTaskStore();
+const { confirm } = useConfirm();
 const calendarStore = useCalendarStore();
 const newTitle = ref('');
 const newDueDate = ref('');
@@ -25,6 +27,15 @@ function onDragStart(task) {
 
 function onDragEnd() {
   taskStore.stopDragging();
+}
+
+async function requestRemoveTask(task) {
+  const confirmed = await confirm({
+    title: 'Delete this task?',
+    message: `"${task.title}" will be permanently deleted.`,
+    confirmLabel: 'Delete task',
+  });
+  if (confirmed) taskStore.removeTask(task.id);
 }
 
 async function submitNewTask() {
@@ -54,7 +65,7 @@ async function submitNewTask() {
         :event-count="eventCountFor(task.id)"
         @dragstart="onDragStart(task)"
         @dragend="onDragEnd"
-        @remove="taskStore.removeTask(task.id)"
+        @remove="requestRemoveTask(task)"
         @update-due-date="taskStore.updateTask(task.id, { dueDate: $event })"
         @sync-due-date="taskStore.syncDueDateToCalendar(task.id)"
       />

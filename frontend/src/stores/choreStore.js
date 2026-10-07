@@ -66,6 +66,17 @@ export const useChoreStore = defineStore('chore', {
       this.persist();
     },
 
+    // Puts back a chore exactly as it was (same id, done state and series)
+    // at its old position in the day, for undoing a removal.
+    restoreChore(dateKey, chore, index = Infinity) {
+      const existing = this.choresByDate[dateKey] ?? [];
+      if (existing.some((c) => c.id === chore.id)) return;
+      const restored = [...existing];
+      restored.splice(Math.min(index, restored.length), 0, chore);
+      this.choresByDate = { ...this.choresByDate, [dateKey]: restored };
+      this.persist();
+    },
+
     toggleChoreDone(dateKey, choreId) {
       const existing = this.choresByDate[dateKey];
       if (!existing) return;
