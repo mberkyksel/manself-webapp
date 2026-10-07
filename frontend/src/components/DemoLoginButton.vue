@@ -3,6 +3,12 @@ import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/userStore.js';
 import { useAppConfig } from '../composables/useAppConfig.js';
 
+// 'form' sits under the login/register forms (divider + hint);
+// 'hero' is the standalone primary button used on the landing page.
+defineProps({
+  variant: { type: String, default: 'form' },
+});
+
 const userStore = useUserStore();
 const router = useRouter();
 const { demoEnabled } = useAppConfig();
@@ -15,16 +21,35 @@ async function onClick() {
 </script>
 
 <template>
-  <div v-if="demoEnabled" class="demo-login">
-    <div class="demo-login__divider"><span>or</span></div>
-    <button type="button" class="demo-login__button" :disabled="userStore.loading" @click="onClick">
-      {{ userStore.loading ? 'Loading the demo...' : 'Try the demo' }}
-    </button>
-    <p class="demo-login__hint">One click, no sign-up - loads a sample account full of example data.</p>
-  </div>
+  <template v-if="demoEnabled">
+    <div v-if="variant === 'hero'" class="demo-hero">
+      <button type="button" class="demo-hero__button" :disabled="userStore.loading" @click="onClick">
+        {{ userStore.loading ? 'Loading the demo...' : 'Try the demo' }}
+      </button>
+      <p v-if="userStore.error" class="demo-hero__error">{{ userStore.error }}</p>
+    </div>
+
+    <div v-else class="demo-login">
+      <div class="demo-login__divider"><span>or</span></div>
+      <button type="button" class="demo-login__button" :disabled="userStore.loading" @click="onClick">
+        {{ userStore.loading ? 'Loading the demo...' : 'Try the demo' }}
+      </button>
+      <p class="demo-login__hint">One click, no sign-up - loads a sample account full of example data.</p>
+    </div>
+  </template>
 </template>
 
 <style scoped>
+.demo-hero {
+  @apply flex flex-col items-center;
+}
+.demo-hero__button {
+  @apply rounded-lg bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-500 disabled:opacity-60;
+}
+.demo-hero__error {
+  @apply mt-2 text-sm text-rose-600;
+}
+
 .demo-login {
   @apply mt-5;
 }
