@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { authService } from '../services/authService.js';
 import { TOKEN_STORAGE_KEY } from '../services/api.js';
+import { useChoreStore } from './choreStore.js';
 
 // Centralized auth state. token/user are only ever written by the actions
 // below (setSession/clearSession) - components call login()/register()/
@@ -59,6 +60,25 @@ export const useUserStore = defineStore('user', {
         return true;
       } catch (err) {
         this.error = err.response?.data?.error?.message || 'Invalid email or password.';
+        return false;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // One-click login to the shared demo account. The server resets the
+    // account's tasks/events/notes on every call; chores are browser-local,
+    // so they get reseeded here.
+    async loginAsDemo() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const { token, user } = await authService.demoLogin();
+        useChoreStore().loadDemoChores();
+        this.setSession(token, user);
+        return true;
+      } catch (err) {
+        this.error = err.response?.data?.error?.message || 'Could not start the demo.';
         return false;
       } finally {
         this.loading = false;

@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/index.js';
 import { env } from '../config/env.js';
+import { resetDemoAccount, isDemoUser } from '../services/demo.service.js';
 
 const SALT_ROUNDS = 10;
 
@@ -32,6 +33,17 @@ function isValidTimezone(timezone) {
   } catch {
     return false;
   }
+}
+
+// The demo account is shared and gets reset on every demo login, so letting
+// a visitor change its credentials or delete it would just break the demo
+// for the next one.
+function rejectIfDemoAccount(user, res) {
+  if (env.demoMode && isDemoUser(user)) {
+    res.status(403).json({ error: { message: 'This is not available in the demo account.' } });
+    return true;
+  }
+  return false;
 }
 
 export async function register(req, res, next) {
@@ -91,6 +103,19 @@ export async function login(req, res, next) {
   }
 }
 
+export async function demoLogin(req, res, next) {
+  try {
+    if (!env.demoMode) {
+      return res.status(404).json({ error: { message: 'Demo mode is not enabled' } });
+    }
+
+    const user = await resetDemoAccount();
+    res.json({ token: signToken(user), user: toPublicUser(user) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function me(req, res, next) {
   try {
     const user = await User.findByPk(req.user.id);
@@ -115,6 +140,7 @@ export async function updatePassword(req, res, next) {
     }
 
     const user = await User.findByPk(req.user.id);
+    if (user && rejectIfDemoAccount(user, res)) return;
     // 403, not 401: the request is properly authenticated (requireAuth already
     // passed), it's just the *current password* that's wrong. The frontend's
     // response interceptor wipes the stored token on any 401, treating it as
@@ -173,6 +199,7 @@ export async function updateEmail(req, res, next) {
     }
 
     const user = await User.findByPk(req.user.id);
+    if (user && rejectIfDemoAccount(user, res)) return;
     if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
       return res.status(403).json({ error: { message: 'Current password is incorrect' } });
     }
@@ -209,6 +236,7 @@ export async function deleteAccount(req, res, next) {
     }
 
     const user = await User.findByPk(req.user.id);
+    if (user && rejectIfDemoAccount(user, res)) return;
     if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
       return res.status(403).json({ error: { message: 'Current password is incorrect' } });
     }

@@ -112,6 +112,14 @@ End-to-end functional, not just a skeleton:
 
 Not implemented yet: Google Calendar sync (calendar events are local-only for now).
 
+## Demo mode
+
+With `DEMO_MODE=true` (set in `.env`, see `.env.example`) the login and register pages show a **Try the demo** button. One click logs into a shared sample account (`demo@manself.local` / `demo-manself`) that is reset to fresh, date-relative data every time: tasks due today and overdue, upcoming calendar events, sticky notes, and scheduled chores (today is one chore short of done, so finishing it shows the confetti).
+
+- `npm run seed` (in `backend/`) runs the same reset from the command line.
+- The server owns tasks, events and notes; chores live in the browser, so the demo login seeds those client-side.
+- Email, password and account deletion are blocked on the demo account. Leave `DEMO_MODE` off for any real deployment.
+
 ## Docker
 
 `docker-compose.yml` runs the full stack: Postgres, the backend API, and the frontend (built and served via nginx).
