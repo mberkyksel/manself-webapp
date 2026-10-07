@@ -59,10 +59,36 @@ export const useChoreStore = defineStore('chore', {
       this.persist();
     },
 
+    // Removing one occurrence of a recurring chore only skips that day: the
+    // date is remembered on the series so materializeSeries doesn't refill it.
     removeChore(dateKey, choreId) {
       const existing = this.choresByDate[dateKey];
       if (!existing) return;
+      const removed = existing.find((c) => c.id === choreId);
       this.choresByDate = { ...this.choresByDate, [dateKey]: existing.filter((c) => c.id !== choreId) };
+      if (removed?.seriesId) this.setSeriesDateSkipped(removed.seriesId, dateKey, true);
+      this.persist();
+    },
+
+    setSeriesDateSkipped(seriesId, dateKey, skipped) {
+      const series = this.recurringSeries[seriesId];
+      if (!series) return;
+      const others = (series.skippedDateKeys ?? []).filter((k) => k !== dateKey);
+      this.recurringSeries = {
+        ...this.recurringSeries,
+        [seriesId]: { ...series, skippedDateKeys: skipped ? [...others, dateKey] : others },
+      };
+    },
+
+    // Puts back a chore exactly as it was (same id, done state and series)
+    // at its old position in the day, for undoing a removal.
+    restoreChore(dateKey, chore, index = Infinity) {
+      const existing = this.choresByDate[dateKey] ?? [];
+      if (existing.some((c) => c.id === chore.id)) return;
+      const restored = [...existing];
+      restored.splice(Math.min(index, restored.length), 0, chore);
+      this.choresByDate = { ...this.choresByDate, [dateKey]: restored };
+      if (chore.seriesId) this.setSeriesDateSkipped(chore.seriesId, dateKey, false);
       this.persist();
     },
 
@@ -140,7 +166,13 @@ export const useChoreStore = defineStore('chore', {
       const seriesId = chore.seriesId ?? crypto.randomUUID();
       this.recurringSeries = {
         ...this.recurringSeries,
-        [seriesId]: { type: chore.type, state: chore.state, recurrence: next, anchorDateKey: dateKey },
+        [seriesId]: {
+          ...this.recurringSeries[seriesId],
+          type: chore.type,
+          state: chore.state,
+          recurrence: next,
+          anchorDateKey: dateKey,
+        },
       };
       this.choresByDate = {
         ...this.choresByDate,
@@ -165,6 +197,17 @@ export const useChoreStore = defineStore('chore', {
         const horizon = new Date(today);
         horizon.setDate(horizon.getDate() + windowDays);
 
+        // Days the user removed on purpose; dropping the past ones keeps the
+        // list from growing forever, since only today onwards is generated.
+        const todayKey = toDateKey(today);
+        const skippedDates = new Set((series.skippedDateKeys ?? []).filter((k) => k >= todayKey));
+        if (skippedDates.size !== (series.skippedDateKeys ?? []).length) {
+          this.recurringSeries = {
+            ...this.recurringSeries,
+            [seriesId]: { ...series, skippedDateKeys: [...skippedDates] },
+          };
+        }
+
         const existingDates = new Set(
           Object.entries(this.choresByDate)
             .filter(([, chores]) => chores.some((c) => c.seriesId === seriesId))
@@ -174,7 +217,7 @@ export const useChoreStore = defineStore('chore', {
         const cursor = new Date(Math.max(anchorDate, today));
         while (cursor <= horizon) {
           const dateKey = toDateKey(cursor);
-          if (!existingDates.has(dateKey)) {
+          if (!existingDates.has(dateKey) && !skippedDates.has(dateKey)) {
             const existing = this.choresByDate[dateKey] ?? [];
             this.choresByDate = {
               ...this.choresByDate,

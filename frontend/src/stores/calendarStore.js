@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { calendarService } from '../services/calendarService.js';
+import { useToast } from '../composables/useToast.js';
 
 // Mirrors taskStore.js so calendar events are shared reactive state instead
 // of a ref local to CalendarView - anything reading calendarStore.events
@@ -44,9 +45,11 @@ export const useCalendarStore = defineStore('calendar', {
       this.events = this.events.filter((e) => e.id !== id);
       try {
         await calendarService.remove(id);
+        useToast().success('Event deleted.');
       } catch (err) {
         this.events = previous;
         console.error(err);
+        useToast().error("Couldn't delete the event, so it was put back.", { key: 'event-delete-failed' });
       }
     },
   },

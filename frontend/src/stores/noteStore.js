@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { noteService } from '../services/noteService.js';
+import { useToast } from '../composables/useToast.js';
 
 const MAX_NOTES = 5;
 const NOTE_SIZE = 200;
@@ -39,14 +40,20 @@ export const useNoteStore = defineStore('note', {
       const maxOffsetY = Math.max(window.innerHeight - NOTE_SIZE - 40, step);
       const offset = this.notes.length * step;
 
-      const note = await noteService.create({
-        text: '',
-        color: 'yellow',
-        positionX: 40 + (offset % maxOffsetX),
-        positionY: 40 + (offset % maxOffsetY),
-      });
-      this.notes.push(note);
-      return note;
+      try {
+        const note = await noteService.create({
+          text: '',
+          color: 'yellow',
+          positionX: 40 + (offset % maxOffsetX),
+          positionY: 40 + (offset % maxOffsetY),
+        });
+        this.notes.push(note);
+        return note;
+      } catch (err) {
+        console.error(err);
+        useToast().error("Couldn't add a note. Please try again.", { key: 'note-add-failed' });
+        return null;
+      }
     },
 
     async updateNote(id, payload) {
@@ -61,6 +68,7 @@ export const useNoteStore = defineStore('note', {
       } catch (err) {
         Object.assign(note, previous);
         console.error(err);
+        useToast().error("Couldn't save the note, so the change was reverted.", { key: 'note-save-failed' });
       }
     },
 
@@ -82,9 +90,11 @@ export const useNoteStore = defineStore('note', {
       this.notes = this.notes.filter((note) => note.id !== id);
       try {
         await noteService.remove(id);
+        useToast().success('Note deleted.');
       } catch (err) {
         this.notes = previous;
         console.error(err);
+        useToast().error("Couldn't delete the note, so it was put back.", { key: 'note-delete-failed' });
       }
     },
   },

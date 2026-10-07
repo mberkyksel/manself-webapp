@@ -15,17 +15,22 @@ function todayDateKey() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-const allChoresDoneToday = computed(() => {
+const todayProgress = computed(() => {
   const chores = choreStore.choresByDate[todayDateKey()] || [];
-  return chores.length > 0 && chores.every((c) => c.isDone);
+  const done = chores.filter((c) => c.isDone).length;
+  return { done, total: chores.length };
 });
 
-// Fires only on the false -> true transition (not on mount/reload with
-// chores already done, and not on every re-render while they stay done),
-// so marking the last chore off and back on again re-triggers it, but
-// sitting on an already-finished day doesn't replay it endlessly.
-watch(allChoresDoneToday, (isDone, wasDone) => {
-  if (!isDone || wasDone) return;
+// Celebrates only when the user ticks off the last open chore: today goes
+// from not-all-done to all-done, one more chore is done, and the total is
+// unchanged. Removing the last unfinished chore (or undoing a removal)
+// changes the total instead, so it doesn't count as finishing the day, and
+// loading an already-finished day doesn't replay it either.
+watch(todayProgress, (now, before) => {
+  const isAllDone = now.total > 0 && now.done === now.total;
+  const wasAllDone = before.total > 0 && before.done === before.total;
+  if (!isAllDone || wasAllDone) return;
+  if (now.total !== before.total || now.done <= before.done) return;
 
   burst();
   showToast.value = true;

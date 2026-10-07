@@ -4,10 +4,14 @@ import CalendarDayCell from './CalendarDayCell.vue';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useCalendarStore } from '../../stores/calendarStore.js';
 import { useChoreStore } from '../../stores/choreStore.js';
+import { useConfirm } from '../../composables/useConfirm.js';
+import { useChoreRemoval } from '../../composables/useChoreRemoval.js';
 
 const taskStore = useTaskStore();
 const calendarStore = useCalendarStore();
 const choreStore = useChoreStore();
+const { confirm } = useConfirm();
+const { removeChoreWithUndo } = useChoreRemoval();
 
 const today = new Date();
 const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -126,6 +130,16 @@ async function addEvent(payload) {
   }
 }
 
+async function requestRemoveEvent(id) {
+  const event = calendarStore.events.find((e) => e.id === id);
+  const confirmed = await confirm({
+    title: 'Delete this event?',
+    message: event ? `"${event.title}" will be removed from your calendar.` : 'This event will be removed from your calendar.',
+    confirmLabel: 'Delete event',
+  });
+  if (confirmed) calendarStore.removeEvent(id);
+}
+
 async function updateEvent(id, payload) {
   try {
     await calendarStore.updateEvent(id, payload);
@@ -172,8 +186,8 @@ async function updateEvent(id, payload) {
         class="calendar-view__compact-cell"
         @add-event="addEvent"
         @update-event="({ id, payload }) => updateEvent(id, payload)"
-        @remove-event="calendarStore.removeEvent"
-        @remove-chore="choreStore.removeChore(dateKey(date), $event)"
+        @remove-event="requestRemoveEvent"
+        @remove-chore="removeChoreWithUndo(dateKey(date), $event)"
         @toggle-chore="choreStore.toggleChoreDone(dateKey(date), $event)"
         @cycle-chore-recurrence="choreStore.cycleChoreRecurrence(dateKey(date), $event)"
       />
@@ -198,8 +212,8 @@ async function updateEvent(id, payload) {
           :outside="cell.outside"
           @add-event="addEvent"
           @update-event="({ id, payload }) => updateEvent(id, payload)"
-          @remove-event="calendarStore.removeEvent"
-          @remove-chore="choreStore.removeChore(dateKey(cell.date), $event)"
+          @remove-event="requestRemoveEvent"
+          @remove-chore="removeChoreWithUndo(dateKey(cell.date), $event)"
           @toggle-chore="choreStore.toggleChoreDone(dateKey(cell.date), $event)"
           @cycle-chore-recurrence="choreStore.cycleChoreRecurrence(dateKey(cell.date), $event)"
         />
