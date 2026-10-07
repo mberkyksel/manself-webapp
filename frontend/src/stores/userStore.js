@@ -21,6 +21,7 @@ export const useUserStore = defineStore('user', {
     name: (state) => state.user?.name ?? 'there',
     timezone: (state) => state.user?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
     location: (state) => state.user?.location ?? null,
+    isDemo: (state) => Boolean(state.user?.isDemo),
   },
 
   actions: {

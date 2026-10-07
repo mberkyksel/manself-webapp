@@ -19,6 +19,9 @@ function toPublicUser(user) {
     email: user.email,
     timezone: user.timezone,
     location: user.location,
+    // Lets the UI explain why the shared demo account can't change its
+    // credentials instead of just failing on submit.
+    isDemo: env.demoMode && isDemoUser(user),
   };
 }
 
