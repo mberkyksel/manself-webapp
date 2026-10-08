@@ -16,7 +16,27 @@ jobs:
     strategy:
       matrix:
         # LTS sürümleri yeterlidir, istersen 18.x de ekleyebilirsin
-        node-version: [20.x, 22.x] 
+        node-version: [20.x, 22.x]
+
+    # The API tests run against a real Postgres so the migrations (including
+    # the ON DELETE CASCADE foreign keys) are exercised, not mocked.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: manself_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/manself_test
 
     steps:
     - uses: actions/checkout@v4
@@ -33,8 +53,12 @@ jobs:
       run: npm ci
       working-directory: backend # Komutun çalışacağı klasör
 
+    - name: Migrate Test Database
+      run: npm run test:setup
+      working-directory: backend
+
     - name: Run Backend Tests
-      run: npm test --if-present
+      run: npm test
       working-directory: backend
 
   # 2. FRONTEND CI JOB
