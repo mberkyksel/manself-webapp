@@ -10,8 +10,8 @@
     "test:watch": "vitest"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Mehmet Berk Yüksel",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "@lucide/vue": "^1.24.0",
