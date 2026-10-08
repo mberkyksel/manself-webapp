@@ -1,8 +1,13 @@
-# manself-webapp
+# manself
 
-A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google Calendar integration planned), a focus-style kanban task board (Now / Next / Done, with progress), a drag-to-schedule recurring household chores widget, freely-positioned sticky notes, and a due-today/overdue todo list - with full account management (register, login, profile/email/password updates, account deletion) behind it.
+[![CI](https://github.com/mberkyksel/manself-webapp/actions/workflows/node.js.yml/badge.svg)](https://github.com/mberkyksel/manself-webapp/actions/workflows/node.js.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+**manself** is a personal daily-life dashboard: a ten-day calendar, a focus-style task board, drag-to-schedule household chores, sticky notes, weather and a clock, behind a full account system. Vue 3 on the front, Express and PostgreSQL behind it, and the whole thing starts with one Docker command.
 
 ![The manself dashboard: ten-day calendar, chores widget, weather, clock, todos and sticky notes](docs/screenshots/dashboard.png)
+
+It is a portfolio project, built with [Claude Code](https://claude.com/claude-code) as a pair programmer. Every change went through a pull request that was reviewed and merged by hand, with CI running the tests (and a Docker smoke test) each time.
 
 ## Quick start
 
@@ -34,11 +39,72 @@ A two-minute tour:
 
 Resize the window (or open it on a phone) to see the mobile layout.
 
+## Screenshots
+
+All taken from the demo account.
+
+| Landing page | Board and sticky notes |
+| --- | --- |
+| ![Landing page](docs/screenshots/landing.png) | ![Kanban board, today's chores and sticky notes](docs/screenshots/board.png) |
+
+<p align="center">
+  <img src="docs/screenshots/mobile.png" alt="The dashboard on a phone" width="300" />
+</p>
+
+## Features
+
+Working end to end, not a skeleton:
+
+- **Auth**: register, login, a settings page (`/app/settings`) to update name/email/password and delete the account (all destructive/credential-changing actions require the current password), session-expiry handling (expired/invalid tokens redirect to login instead of failing silently)
+- **Dashboard**: welcome banner, clock, weather (browser geolocation, falling back to a saved city or a default; OpenWeather with a daily-quota budget, or keyless Open-Meteo when no API key is set), branded favicon/wordmark, copyright footer
+- **Calendar**: compact and full-month views, event CRUD, optional task linking
+- **Task board**: Now / Next / Done lanes with a progress bar, overdue and due-today chips, friendly due-date labels, one-tap completion with a DONE stamp, a collapsing Done lane, and drag-and-drop across lanes (mouse and touch, via Pointer Events)
+- **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
+- **Sticky notes**: free-drag positioning from 1440 px wide up, a stacked bottom-sheet list below that (no free positioning there - they would cover the page)
+- **Today's Todos**: due-today and overdue tasks, inline complete toggle
+- **Feedback**: toast notifications, confirm dialogs before destructive actions, and an *Undo* for removed chores; helpful empty states
+- **Public site**: landing page with a product preview, 404 page, one-click demo login
+- Responsive down to mobile widths across the whole app
+
+**Not implemented yet:** Google Calendar sync. Calendar events are local to the app for now.
+
 ## Tech stack
 
-- **Frontend**: Vue 3 (Composition API) + Vite + Tailwind CSS + Pinia
-- **Backend**: Node.js + Express (ES Modules)
-- **Database**: PostgreSQL via Sequelize (models + migrations)
+- **Frontend**: Vue 3 (Composition API, `<script setup>`), Vue Router, Pinia, Vite, Tailwind CSS 3, Lucide icons
+- **Backend**: Node.js 20+ and Express 5 (ES modules), JWT authentication, bcrypt
+- **Database**: PostgreSQL 16 via Sequelize (models and migrations)
+- **Tests and CI**: Vitest with Vue Test Utils, Node's test runner with supertest, and GitHub Actions (tests on Node 20 and 22, plus a Docker smoke test)
+- **Packaging**: Docker Compose, with nginx serving the build and proxying the API
+
+## Docker
+
+`docker-compose.yml` runs the whole stack: Postgres, the backend API, and the frontend (built, then served by nginx, which also proxies `/api/*` to the backend so the browser only ever talks to one origin - see `frontend/nginx.conf`).
+
+```bash
+docker compose up --build        # add -d to run in the background
+```
+
+It is set up so that nothing has to be configured:
+
+- **Only the web app's port is published**: `http://localhost:8080` (change it with `FRONTEND_PORT`). The API and Postgres stay inside Docker's network, so nothing clashes with a database or dev server you already run.
+- **Demo mode is on** (`DEMO_MODE=true`), so the login page has **Try the demo**.
+- **`JWT_SECRET` can be left out**: in demo mode a random one is generated on each start (everyone is signed out when the backend restarts). It is *required* as soon as `DEMO_MODE` is off.
+- **Weather needs no key**: without `WEATHER_API_KEY` the backend uses [Open-Meteo](https://open-meteo.com/); with a key it uses OpenWeather.
+- The backend waits for Postgres to be healthy, runs any pending migrations on every start, and the frontend waits for the backend to be healthy, so the first click always works.
+
+To change anything, copy `.env.example` to `.env` next to `docker-compose.yml` (optional; it is picked up automatically) or set variables in your shell.
+
+**This is a demo setup, not a production one.** Everyone who clicks *Try the demo* shares one account that is reset on each login. For a real deployment set `DEMO_MODE=false`, a real `JWT_SECRET`, and your own database credentials.
+
+**Developing outside Docker?** `docker-compose.dev.yml` publishes Postgres (`POSTGRES_PORT`, default 5432) and the backend (`BACKEND_PORT`, default 3000) for that; see [Local development](#local-development).
+
+## Demo mode
+
+With `DEMO_MODE=true` (set in `.env`, see `.env.example`) the login and register pages show a **Try the demo** button. One click logs into a shared sample account (`demo@manself.local` / `demo-manself`) that is reset to fresh, date-relative data every time: tasks due today and overdue, upcoming calendar events, sticky notes, and scheduled chores (today is one chore short of done, so finishing it shows the confetti).
+
+- `npm run seed` (in `backend/`) runs the same reset from the command line.
+- The server owns tasks, events and notes; chores live in the browser, so the demo login seeds those client-side.
+- Email, password and account deletion are blocked on the demo account. Leave `DEMO_MODE` off for any real deployment.
 
 ## Local development
 
@@ -155,67 +221,20 @@ Covers register/login/token checks, profile, password and email changes, account
 
 ```
 manself-webapp/
-├── frontend/   # Vue 3 + Vite + Tailwind + Pinia
-└── backend/    # Node.js + Express (ESM) + Sequelize
+├── frontend/              # Vue 3 + Vite + Tailwind + Pinia (src/: components, composables, stores, views)
+├── backend/               # Express + Sequelize (src/: controllers, routes, models, migrations, __tests__)
+├── docs/screenshots/      # images used in this README
+├── docker-compose.yml     # the zero-config stack
+├── docker-compose.dev.yml # extra ports for developing outside Docker
+└── .github/workflows/     # CI: tests on Node 20 and 22, Docker smoke test
 ```
 
-See `frontend/src/` and `backend/src/` for the full module layout (components, composables, stores, models, controllers, routes, migrations).
+## Credits
 
-## Screenshots
+- Fonts: [Fredoka](https://github.com/hafontia/Fredoka-One) for the wordmark (SIL Open Font License 1.1, see `frontend/src/assets/fonts/fredoka-OFL.txt`) and Permanent Marker by Font Diner for the sticky notes (Apache License 2.0, see `frontend/src/assets/fonts/permanent-marker-APACHE-2.0.txt`). Both are self-hosted.
+- Icons: [Lucide](https://lucide.dev/) (ISC). Animated weather icons: [Skycons](https://github.com/darkskyapp/skycons) (MIT).
+- Weather data: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0, used when no OpenWeather key is set) and [OpenWeather](https://openweathermap.org/) (when one is).
 
-All taken from the demo account.
+## License
 
-| Landing page | Board and sticky notes |
-| --- | --- |
-| ![Landing page](docs/screenshots/landing.png) | ![Kanban board, today's chores and sticky notes](docs/screenshots/board.png) |
-
-<p align="center">
-  <img src="docs/screenshots/mobile.png" alt="The dashboard on a phone" width="300" />
-</p>
-
-## Status
-
-End-to-end functional, not just a skeleton:
-
-- **Auth**: register, login, a settings page (`/app/settings`) to update name/email/password and delete the account (all destructive/credential-changing actions require the current password), session-expiry handling (expired/invalid tokens redirect to login instead of failing silently)
-- **Dashboard**: welcome banner, clock, weather (browser geolocation, falling back to a saved city or a default; OpenWeather with a daily-quota budget, or keyless Open-Meteo when no API key is set), branded favicon/wordmark, copyright footer
-- **Calendar**: compact and full-month views, event CRUD, optional task linking
-- **Task board**: Now / Next / Done lanes with a progress bar, overdue and due-today chips, friendly due-date labels, one-tap completion with a DONE stamp, a collapsing Done lane, and drag-and-drop across lanes (mouse and touch, via Pointer Events)
-- **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
-- **Sticky notes**: free-drag positioning from 1440 px wide up, a stacked bottom-sheet list below that (no free positioning there - they would cover the page)
-- **Today's Todos**: due-today and overdue tasks, inline complete toggle
-- **Feedback**: toast notifications, confirm dialogs before destructive actions, and an *Undo* for removed chores; helpful empty states
-- **Public site**: landing page with a product preview, 404 page, one-click demo login
-- Responsive down to mobile widths across the whole app
-
-Not implemented yet: Google Calendar sync (calendar events are local-only for now).
-
-## Demo mode
-
-With `DEMO_MODE=true` (set in `.env`, see `.env.example`) the login and register pages show a **Try the demo** button. One click logs into a shared sample account (`demo@manself.local` / `demo-manself`) that is reset to fresh, date-relative data every time: tasks due today and overdue, upcoming calendar events, sticky notes, and scheduled chores (today is one chore short of done, so finishing it shows the confetti).
-
-- `npm run seed` (in `backend/`) runs the same reset from the command line.
-- The server owns tasks, events and notes; chores live in the browser, so the demo login seeds those client-side.
-- Email, password and account deletion are blocked on the demo account. Leave `DEMO_MODE` off for any real deployment.
-
-## Docker
-
-`docker-compose.yml` runs the whole stack: Postgres, the backend API, and the frontend (built, then served by nginx, which also proxies `/api/*` to the backend so the browser only ever talks to one origin - see `frontend/nginx.conf`).
-
-```bash
-docker compose up --build        # add -d to run in the background
-```
-
-It is set up so that nothing has to be configured:
-
-- **Only the web app's port is published**: `http://localhost:8080` (change it with `FRONTEND_PORT`). The API and Postgres stay inside Docker's network, so nothing clashes with a database or dev server you already run.
-- **Demo mode is on** (`DEMO_MODE=true`), so the login page has **Try the demo**.
-- **`JWT_SECRET` can be left out**: in demo mode a random one is generated on each start (everyone is signed out when the backend restarts). It is *required* as soon as `DEMO_MODE` is off.
-- **Weather needs no key**: without `WEATHER_API_KEY` the backend uses [Open-Meteo](https://open-meteo.com/); with a key it uses OpenWeather.
-- The backend waits for Postgres to be healthy, runs any pending migrations on every start, and the frontend waits for the backend to be healthy, so the first click always works.
-
-To change anything, copy `.env.example` to `.env` next to `docker-compose.yml` (optional; it is picked up automatically) or set variables in your shell.
-
-**This is a demo setup, not a production one.** Everyone who clicks *Try the demo* shares one account that is reset on each login. For a real deployment set `DEMO_MODE=false`, a real `JWT_SECRET`, and your own database credentials.
-
-**Developing outside Docker?** `docker-compose.dev.yml` publishes Postgres (`POSTGRES_PORT`, default 5432) and the backend (`BACKEND_PORT`, default 3000) for that; see [Local development](#local-development).
+[MIT](LICENSE) © 2026 Mehmet Berk Yüksel
