@@ -181,7 +181,7 @@ const legendItems = [
 </script>
 
 <template>
-  <div class="chores-widget">
+  <div class="chores-widget" :class="{ 'chores-widget--solid': legendOpen }">
     <div class="chores-widget__roof" aria-hidden="true"></div>
 
     <div class="chores-widget__body">
@@ -269,6 +269,15 @@ const legendItems = [
   box-shadow:
     inset 0 2px 4px rgba(0, 0, 0, 0.1),
     0 10px 30px -10px rgba(120, 53, 15, 0.35);
+}
+
+/* The glass background lets whatever is behind the widget show through, which
+   is pretty until the legend is open: sticky notes under it then mix with its
+   text. While the legend is open the widget turns solid, in the colour the
+   glass looks like over the page (amber-400 at 10% over slate-100). */
+.chores-widget--solid {
+  background-color: #f2f0e4;
+  transition: background-color 0.3s;
 }
 
 /* Stylized gable roof, built with the classic CSS border-triangle technique
