@@ -113,11 +113,12 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async updateProfile({ name }) {
+    // Takes any of { name, location }; only the given fields are changed.
+    async updateProfile(changes) {
       this.loading = true;
       this.error = null;
       try {
-        const { user } = await authService.updateProfile({ name });
+        const { user } = await authService.updateProfile(changes);
         this.user = user;
         return true;
       } catch (err) {

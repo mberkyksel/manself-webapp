@@ -1,9 +1,10 @@
 <script setup>
 import { onMounted, computed } from 'vue';
 import { useWeather } from '../../composables/useWeather.js';
+import { CloudOff } from '@lucide/vue';
 import WeatherIcon from './WeatherIcon.vue';
 
-const { weather, loading, error, fetchWeather } = useWeather();
+const { weather, loading, error, source, fetchWeather } = useWeather();
 
 onMounted(fetchWeather);
 
@@ -35,8 +36,13 @@ const gradientClass = computed(() => GRADIENTS[weather.value?.icon] || 'from-sky
 
 <template>
   <div class="weather-card">
-    <div v-if="loading" class="weather-card__status text-slate-400">Loading weather...</div>
-    <div v-else-if="error" class="weather-card__status text-rose-500">{{ error }}</div>
+    <div v-if="loading" class="weather-card__status weather-card__status--loading">Loading weather...</div>
+    <div v-else-if="error" class="weather-card__status">
+      <CloudOff :size="22" class="weather-card__status-icon" aria-hidden="true" />
+      <p class="weather-card__status-title">Weather unavailable</p>
+      <p class="weather-card__status-text">{{ error }}</p>
+      <button type="button" class="weather-card__retry" @click="fetchWeather">Try again</button>
+    </div>
 
     <div v-else-if="weather" :class="['weather-card__body', gradientClass]">
       <div class="weather-card__header">
@@ -53,6 +59,11 @@ const gradientClass = computed(() => GRADIENTS[weather.value?.icon] || 'from-sky
         <span>{{ weather.humidity }}% humidity</span>
         <span>{{ weather.windSpeed }} m/s</span>
       </div>
+
+      <p v-if="source !== 'device'" class="weather-card__source">
+        {{ source === 'profile' ? 'Your saved location.' : 'Default location.' }}
+        <router-link :to="{ name: 'settings' }" class="weather-card__source-link">Change</router-link>
+      </p>
     </div>
   </div>
 </template>
@@ -63,6 +74,27 @@ const gradientClass = computed(() => GRADIENTS[weather.value?.icon] || 'from-sky
 }
 .weather-card__status {
   @apply rounded-2xl bg-white p-4 text-sm;
+}
+.weather-card__status--loading {
+  @apply text-slate-400;
+}
+.weather-card__status-icon {
+  @apply text-slate-400;
+}
+.weather-card__status-title {
+  @apply mt-2 font-medium text-slate-700;
+}
+.weather-card__status-text {
+  @apply mt-0.5 text-xs text-slate-500;
+}
+.weather-card__retry {
+  @apply mt-3 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200;
+}
+.weather-card__source {
+  @apply mt-2 text-[11px] text-white/70;
+}
+.weather-card__source-link {
+  @apply font-medium text-white underline;
 }
 .weather-card__body {
   @apply bg-gradient-to-br p-4 text-white;

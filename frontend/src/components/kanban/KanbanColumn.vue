@@ -14,6 +14,12 @@ const props = defineProps({
 const taskStore = useTaskStore();
 const { confirm } = useConfirm();
 const calendarStore = useCalendarStore();
+const EMPTY_HINTS = {
+  todo: 'No tasks yet. Add one below.',
+  in_progress: 'Drag a task here once you start it.',
+  done: 'Finished tasks end up here.',
+};
+
 const newTitle = ref('');
 const newDueDate = ref('');
 
@@ -57,6 +63,8 @@ async function submitNewTask() {
       <span class="kanban-column__count">{{ tasks.length }}</span>
     </div>
 
+    <p v-if="tasks.length === 0" class="kanban-column__empty">{{ EMPTY_HINTS[status] ?? 'No tasks.' }}</p>
+
     <div class="kanban-column__list">
       <TaskCard
         v-for="task in tasks"
@@ -91,6 +99,9 @@ async function submitNewTask() {
 }
 .kanban-column__count {
   @apply text-xs text-slate-400;
+}
+.kanban-column__empty {
+  @apply rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-xs text-slate-400;
 }
 .kanban-column__list {
   @apply flex flex-col gap-2;

@@ -1,6 +1,7 @@
 <script setup>
 import { ArrowLeft } from '@lucide/vue';
 import ProfileForm from '../components/settings/ProfileForm.vue';
+import LocationForm from '../components/settings/LocationForm.vue';
 import EmailForm from '../components/settings/EmailForm.vue';
 import PasswordForm from '../components/settings/PasswordForm.vue';
 import DeleteAccountCard from '../components/settings/DeleteAccountCard.vue';
@@ -18,6 +19,7 @@ import DeleteAccountCard from '../components/settings/DeleteAccountCard.vue';
 
       <div class="settings-view__sections">
         <ProfileForm />
+        <LocationForm />
         <EmailForm />
         <PasswordForm />
         <DeleteAccountCard />
