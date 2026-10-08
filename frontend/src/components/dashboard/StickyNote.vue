@@ -4,7 +4,7 @@ import { usePointerDrag } from '../../composables/usePointerDrag.js';
 
 const props = defineProps({
   note: { type: Object, required: true },
-  // True on narrow viewports, where notes render in a stacked list instead
+  // True below 1440px, where notes render in a stacked list instead
   // of free-floating - see StickyNotesManager.vue. Stacked notes don't
   // drag, tilt, or track z-index; there's nothing to overlap in a list.
   stacked: { type: Boolean, default: false },
