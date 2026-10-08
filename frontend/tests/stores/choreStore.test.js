@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { useChoreStore } from './choreStore.js';
-import { CHORE_TYPES } from '../constants/chores.js';
+import { useChoreStore } from '../../src/stores/choreStore.js';
+import { CHORE_TYPES } from '../../src/constants/chores.js';
 
 // Local noon on Wed 7 Oct 2026, so "today" is deterministic.
 const TODAY = '2026-10-07';

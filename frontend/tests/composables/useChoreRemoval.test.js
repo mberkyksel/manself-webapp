@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { useChoreStore } from '../stores/choreStore.js';
-import { useChoreRemoval } from './useChoreRemoval.js';
-import { useToast } from './useToast.js';
+import { useChoreStore } from '../../src/stores/choreStore.js';
+import { useChoreRemoval } from '../../src/composables/useChoreRemoval.js';
+import { useToast } from '../../src/composables/useToast.js';
 
 const DAY = '2026-10-07';
 const toast = useToast();

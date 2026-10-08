@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { useConfirm } from './useConfirm.js';
+import { useConfirm } from '../../src/composables/useConfirm.js';
 
 describe('useConfirm', () => {
   it('resolves true when confirmed and clears the dialog', async () => {

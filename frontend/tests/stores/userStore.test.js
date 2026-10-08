@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
-vi.mock('../services/api.js', () => ({ TOKEN_STORAGE_KEY: 'manself_token', api: {} }));
-vi.mock('../services/authService.js', () => ({
+vi.mock('../../src/services/api.js', () => ({ TOKEN_STORAGE_KEY: 'manself_token', api: {} }));
+vi.mock('../../src/services/authService.js', () => ({
   authService: {
     register: vi.fn(),
     login: vi.fn(),
@@ -15,9 +15,9 @@ vi.mock('../services/authService.js', () => ({
   },
 }));
 
-const { authService } = await import('../services/authService.js');
-const { useUserStore } = await import('./userStore.js');
-const { useChoreStore } = await import('./choreStore.js');
+const { authService } = await import('../../src/services/authService.js');
+const { useUserStore } = await import('../../src/stores/userStore.js');
+const { useChoreStore } = await import('../../src/stores/choreStore.js');
 
 const USER = { id: 1, name: 'Tess', email: 'tess@example.test', timezone: 'Europe/Berlin', location: null, isDemo: false };
 

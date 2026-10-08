@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeDueDate, todayKey } from './dueDate.js';
+import { describeDueDate, todayKey } from '../../src/utils/dueDate.js';
 
 // Wednesday 7 Oct 2026, local noon.
 const NOW = new Date(2026, 9, 7, 12, 0, 0);

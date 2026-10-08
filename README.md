@@ -221,8 +221,12 @@ Covers register/login/token checks, profile, password and email changes, account
 
 ```
 manself-webapp/
-├── frontend/              # Vue 3 + Vite + Tailwind + Pinia (src/: components, composables, stores, views)
-├── backend/               # Express + Sequelize (src/: controllers, routes, models, migrations, __tests__)
+├── frontend/              # Vue 3 + Vite + Tailwind + Pinia
+│   ├── src/               #   components, composables, stores, views
+│   └── tests/             #   unit tests, mirroring src/
+├── backend/               # Express + Sequelize
+│   ├── src/               #   controllers, routes, models, migrations
+│   └── tests/             #   API tests (real Postgres)
 ├── docs/screenshots/      # images used in this README
 ├── docker-compose.yml     # the zero-config stack
 ├── docker-compose.dev.yml # extra ports for developing outside Docker

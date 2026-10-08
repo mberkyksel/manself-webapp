@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 // env.js decides things once, at import time, so each case loads it in a fresh
 // process with a controlled environment (and no .env file to leak values in).
-const envModule = fileURLToPath(new URL('../config/env.js', import.meta.url));
+const envModule = fileURLToPath(new URL('../src/config/env.js', import.meta.url));
 
 function loadEnv(vars) {
   const script = `import(${JSON.stringify(envModule)}).then((m) => console.log(JSON.stringify({ secretLength: m.env.jwtSecret.length })))`;
