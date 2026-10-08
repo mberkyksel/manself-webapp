@@ -2,6 +2,7 @@
 import { CalendarDays, SquareKanban, House, ListChecks, StickyNote, CloudSun } from '@lucide/vue';
 import { useUserStore } from '../stores/userStore.js';
 import DemoLoginButton from '../components/DemoLoginButton.vue';
+import dashboardPreview from '../assets/landing/dashboard.webp';
 
 const userStore = useUserStore();
 
@@ -68,6 +69,17 @@ const stack = ['Vue 3', 'Pinia', 'Tailwind CSS', 'Express', 'PostgreSQL', 'Docke
           Already have an account? <router-link :to="{ name: 'login' }" class="landing__link">Log in</router-link>
         </p>
       </div>
+    </section>
+
+    <section class="landing__preview" aria-label="Screenshot of the dashboard">
+      <img
+        :src="dashboardPreview"
+        alt="The manself dashboard: a ten-day calendar, a chores widget, today's todos, weather, clock and sticky notes."
+        width="1440"
+        height="900"
+        class="landing__preview-image"
+        loading="lazy"
+      />
     </section>
 
     <section class="landing__section" aria-labelledby="features-heading">
@@ -139,6 +151,12 @@ const stack = ['Vue 3', 'Pinia', 'Tailwind CSS', 'Express', 'PostgreSQL', 'Docke
   @apply font-medium text-slate-700 hover:underline;
 }
 
+.landing__preview {
+  @apply mx-auto -mt-8 max-w-5xl px-5 sm:-mt-12;
+}
+.landing__preview-image {
+  @apply relative h-auto w-full rounded-2xl border border-white/80 bg-white shadow-[0_30px_80px_-30px_rgba(30,41,59,0.45)];
+}
 .landing__section {
   @apply mx-auto max-w-6xl px-5 py-12;
 }

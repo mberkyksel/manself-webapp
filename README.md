@@ -2,6 +2,24 @@
 
 A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google Calendar integration planned), a Jira-style kanban task board, a drag-to-schedule recurring household chores widget, freely-positioned sticky notes, and a due-today/overdue todo list - with full account management (register, login, profile/email/password updates, account deletion) behind it.
 
+![The manself dashboard: ten-day calendar, chores widget, weather, clock, todos and sticky notes](docs/screenshots/dashboard.png)
+
+## Try the demo
+
+The quickest way to see everything is the one-click demo account. Start the app (see [Docker](#docker) or [Setup](#setup)), open it, and press **Try the demo**. It needs `DEMO_MODE=true`, which `.env.example` already sets. See [Demo mode](#demo-mode) for what the account contains.
+
+A two-minute tour:
+
+1. **Calendar.** The top card shows the next ten days. Press **+ Add** on a day to create an event, or **Full month** for the whole grid.
+2. **Chores.** Drag an icon from the *Home Widget* (top right) onto a day. On a chore badge: click toggles done, double-click removes it (an *Undo* toast appears), right-click cycles repeat (daily / weekly).
+3. **Celebration.** Today is one chore short of done. Click the laundry badge in *Today's Chores* to finish the day and get the confetti.
+4. **Kanban board.** Drag *Prepare Friday demo slides* into **Done**. Deleting a task asks for confirmation first.
+5. **Sticky notes.** Drag a note anywhere, or add one with **+ Note**. Below 640 px wide they turn into a bottom sheet.
+6. **Weather.** The card uses your browser location. If you block it, it falls back to a saved city, then to Berlin.
+7. **Settings.** Open the menu (top-left logo), then **Settings**, to change the name or weather city. Email, password and deletion are locked on the demo account, and the page says so.
+
+Resize the window (or open it on a phone) to see the mobile layout.
+
 ## Tech stack
 
 - **Frontend**: Vue 3 (Composition API) + Vite + Tailwind CSS + Pinia
@@ -97,6 +115,18 @@ manself-webapp/
 
 See `frontend/src/` and `backend/src/` for the full module layout (components, composables, stores, models, controllers, routes, migrations).
 
+## Screenshots
+
+All taken from the demo account.
+
+| Landing page | Board and sticky notes |
+| --- | --- |
+| ![Landing page](docs/screenshots/landing.png) | ![Kanban board, today's chores and sticky notes](docs/screenshots/board.png) |
+
+<p align="center">
+  <img src="docs/screenshots/mobile.png" alt="The dashboard on a phone" width="300" />
+</p>
+
 ## Status
 
 End-to-end functional, not just a skeleton:
@@ -108,6 +138,8 @@ End-to-end functional, not just a skeleton:
 - **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
 - **Sticky notes**: free-drag positioning on desktop/tablet, a stacked bottom-sheet list on mobile (no free positioning there - not enough room)
 - **Today's Todos**: due-today and overdue tasks, inline complete toggle
+- **Feedback**: toast notifications, confirm dialogs before destructive actions, and an *Undo* for removed chores; helpful empty states
+- **Public site**: landing page with a product preview, 404 page, one-click demo login
 - Responsive down to mobile widths across the whole app
 
 Not implemented yet: Google Calendar sync (calendar events are local-only for now).
