@@ -257,12 +257,13 @@ const legendItems = [
      are exactly the colors called out in spec, so the opacity-modifier
      utilities below hit those rgba() values precisely.
      Mobile-first: normal document flow instead of floating over content
-     there's no room for it to float over; sm: and up restores the original
-     fixed, floating widget. mt-16 on mobile clears SidePanel's fixed
-     top-left trigger button (top-6, h-10), which would otherwise sit on
-     top of this widget's title since that trigger stays fixed regardless
-     of document flow. */
-  @apply relative mx-auto mb-6 mt-16 w-full max-w-xs rounded-2xl border border-amber-400/20 bg-amber-400/10 sm:fixed sm:right-4 sm:top-12 sm:z-50 sm:mx-0 sm:mb-0 sm:mt-0 sm:w-64;
+     there's no room for it to float over; xl: (1280px) and up restores the
+     original fixed, floating widget. The dashboard reserves a gutter for it
+     (see DashboardView.vue), so it never covers the calendar. mt-16 below
+     xl clears SidePanel's fixed top-left trigger button (top-6, h-10), which
+     would otherwise sit on top of this widget's title since that trigger
+     stays fixed regardless of document flow. */
+  @apply relative mx-auto mb-6 mt-16 w-full max-w-xs rounded-2xl border border-amber-400/20 bg-amber-400/10 xl:fixed xl:right-4 xl:top-12 xl:z-50 xl:mx-0 xl:mb-0 xl:mt-0 xl:w-64;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow:

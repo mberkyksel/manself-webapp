@@ -17,7 +17,7 @@ const isChoresWidgetOpen = ref(true);
 </script>
 
 <template>
-  <main class="dashboard-view">
+  <main class="dashboard-view" :class="{ 'dashboard-view--widget-docked': isChoresWidgetOpen }">
     <Transition
       enter-active-class="transition ease-out duration-200"
       enter-from-class="transform opacity-0 scale-95"
@@ -58,6 +58,13 @@ const isChoresWidgetOpen = ref(true);
 <style scoped>
 .dashboard-view {
   @apply flex-1 px-6 py-8;
+}
+/* From xl the chores widget floats at the right edge (16rem wide, 1rem from
+   the edge), so the content gets a matching gutter and slides left of it
+   instead of sitting underneath. Wide screens already have that space on
+   either side of the centred content, so the gutter goes away there. */
+.dashboard-view--widget-docked {
+  @apply xl:pr-[18.5rem] min-[1600px]:pr-6;
 }
 .dashboard-view__calendar {
   @apply mx-auto max-w-5xl;
