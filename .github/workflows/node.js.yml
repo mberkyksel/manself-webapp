@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # LTS sürümleri yeterlidir, istersen 18.x de ekleyebilirsin
         node-version: [20.x, 22.x]
 
     # The API tests run against a real Postgres so the migrations (including
@@ -45,13 +44,12 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
-        # Cache'in hangi klasördeki package-lock.json'a bakacağını belirttik
         cache: 'npm'
         cache-dependency-path: 'backend/package-lock.json'
 
     - name: Install Backend Dependencies
       run: npm ci
-      working-directory: backend # Komutun çalışacağı klasör
+      working-directory: backend
 
     - name: Migrate Test Database
       run: npm run test:setup
