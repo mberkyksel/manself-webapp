@@ -96,6 +96,8 @@ Starts the Vite dev server on `http://localhost:5173`. API calls to `/api/*` are
 | `npm run migrate` | Run pending Sequelize migrations |
 | `npm run migrate:undo` | Roll back the last migration |
 | `npm run seed` | Run seeders |
+| `npm test` | Run the API tests (needs the test database, see [Tests](#tests)) |
+| `npm run test:setup` | Run migrations on the test database |
 
 ## Frontend scripts
 
@@ -104,6 +106,32 @@ Starts the Vite dev server on `http://localhost:5173`. API calls to `/api/*` are
 | `npm run dev` | Start the Vite dev server |
 | `npm run build` | Production build to `frontend/dist` |
 | `npm run preview` | Preview the production build locally |
+| `npm test` | Run the unit tests once (Vitest) |
+| `npm run test:watch` | Re-run the unit tests on change |
+
+## Tests
+
+Both apps run in CI on every push and pull request (`.github/workflows/node.js.yml`).
+
+**Frontend** (Vitest + jsdom, nothing else needed):
+
+```bash
+cd frontend && npm test
+```
+
+Covers the chore store (recurrence, skipped days, undo), toasts, confirm dialogs, chore removal with undo, the auth store, the weather fallback order, and the "all chores done" celebration.
+
+**Backend** (Node's built-in test runner + supertest) runs the real Express app against a real Postgres, so the migrations and their cascading deletes are exercised. It uses a **separate database** and refuses to run if the database name doesn't contain `test`, because the tests truncate tables:
+
+```bash
+docker exec manself-postgres createdb -U postgres manself_test     # once
+export TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/manself_test   # adjust the port if you changed POSTGRES_PORT
+cd backend
+npm run test:setup   # runs the migrations on the test database
+npm test
+```
+
+Covers register/login/token checks, profile, password and email changes, account deletion (including that owned data is deleted), per-user data isolation, demo mode and its restrictions, and the weather endpoint (with the upstream API stubbed).
 
 ## Project structure
 
