@@ -14,9 +14,9 @@ function close() {
   isOpen.value = false;
 }
 
-function onLogout() {
+async function onLogout() {
   close();
-  userStore.logout();
+  await userStore.logout();
   router.push({ name: 'landing' });
 }
 </script>

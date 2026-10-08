@@ -103,7 +103,7 @@ To change anything, copy `.env.example` to `.env` next to `docker-compose.yml` (
 With `DEMO_MODE=true` (set in `.env`, see `.env.example`) the login and register pages show a **Try the demo** button. One click logs into a shared sample account (`demo@manself.local` / `demo-manself`) that is reset to fresh, date-relative data every time: tasks due today and overdue, upcoming calendar events, sticky notes, and scheduled chores (today is one chore short of done, so finishing it shows the confetti).
 
 - `npm run seed` (in `backend/`) runs the same reset from the command line.
-- The server owns tasks, events and notes; chores live in the browser, so the demo login seeds those client-side.
+- Everything the demo shows (tasks, events, notes and chores) is stored on the server per user and reset on each demo login, like any other account's data. The browser sends its own date so the demo's chores line up with the visitor's "today".
 - Email, password and account deletion are blocked on the demo account. Leave `DEMO_MODE` off for any real deployment.
 
 ## Local development
@@ -203,7 +203,7 @@ Both apps run in CI on every push and pull request (`.github/workflows/node.js.y
 cd frontend && npm test
 ```
 
-Covers the chore store (recurrence, skipped days, undo), toasts, confirm dialogs, chore removal with undo, the auth store, the weather fallback order, and the "all chores done" celebration.
+Covers the chore store (loading and saving per user, recurrence, skipped days, undo), toasts, confirm dialogs, chore removal with undo, the auth store, the weather fallback order, and the "all chores done" celebration.
 
 **Backend** (Node's built-in test runner + supertest) runs the real Express app against a real Postgres, so the migrations and their cascading deletes are exercised. It uses a **separate database** and refuses to run if the database name doesn't contain `test`, because the tests truncate tables:
 
@@ -215,7 +215,7 @@ npm run test:setup   # runs the migrations on the test database
 npm test
 ```
 
-Covers register/login/token checks, profile, password and email changes, account deletion (including that owned data is deleted), per-user data isolation, demo mode and its restrictions, and the weather endpoint (with the upstream API stubbed).
+Covers register/login/token checks, profile, password and email changes, account deletion (including that owned data is deleted), per-user data isolation (including chores: an account never sees another's, and a new account after the demo starts empty), demo mode and its restrictions, and the weather endpoint (with the upstream API stubbed).
 
 ## Project structure
 

@@ -1,7 +1,12 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { useChoreStore } from '../../src/stores/choreStore.js';
 import { CHORE_TYPES } from '../../src/constants/chores.js';
+
+const service = vi.hoisted(() => ({ get: vi.fn(), save: vi.fn() }));
+vi.mock('../../src/services/choreService.js', () => ({ choreService: service }));
+
+const { useChoreStore } = await import('../../src/stores/choreStore.js');
+const { useToast } = await import('../../src/composables/useToast.js');
 
 // Local noon on Wed 7 Oct 2026, so "today" is deterministic.
 const TODAY = '2026-10-07';
@@ -38,14 +43,13 @@ afterEach(() => {
 });
 
 describe('basic chores', () => {
-  it('adds a chore as not done and persists it', () => {
+  it('adds a chore as not done', () => {
     const store = useChoreStore();
     store.addChore(TODAY, { id: 'a', type: CHORE_TYPES.LAUNDRY, state: 'colors' });
 
     expect(store.choresByDate[TODAY]).toEqual([
       { id: 'a', type: 'laundry', state: 'colors', isDone: false, seriesId: null },
     ]);
-    expect(JSON.parse(localStorage.getItem('manself:chores')).choresByDate[TODAY]).toHaveLength(1);
   });
 
   it('toggles done on and off', () => {
@@ -69,15 +73,6 @@ describe('basic chores', () => {
     store.restoreChore(TODAY, removed, 1);
     store.restoreChore(TODAY, removed, 1); // a second undo must not duplicate it
     expect(store.choresByDate[TODAY].map((c) => c.id)).toEqual(['a', 'b', 'c']);
-  });
-
-  it('loads the older save format that stored the date map at the top level', () => {
-    localStorage.setItem('manself:chores', JSON.stringify({ [TODAY]: [{ id: 'old', type: 'mop', isDone: true }] }));
-    setActivePinia(createPinia());
-    const store = useChoreStore();
-
-    expect(store.choresByDate[TODAY][0].id).toBe('old');
-    expect(store.recurringSeries).toEqual({});
   });
 });
 
@@ -271,17 +266,183 @@ describe('removing one occurrence of a recurring chore', () => {
   });
 });
 
-describe('demo chores', () => {
-  it('leaves today exactly one chore short of done, with a weekly series coming up', () => {
+const toasts = useToast();
+
+// A loaded store, as it is after a user signs in.
+async function loadedStore(doc = { choresByDate: {}, recurringSeries: {} }) {
+  service.get.mockResolvedValue(doc);
+  const store = useChoreStore();
+  await store.load();
+  service.save.mockClear();
+  return store;
+}
+
+describe('loading', () => {
+  it('fills the store from the server and ignores the old browser-wide copy', async () => {
+    localStorage.setItem('manself:chores', JSON.stringify({ choresByDate: { [TODAY]: [{ id: 'leak', type: 'mop' }] } }));
+    const doc = { choresByDate: { [TODAY]: [{ id: 'mine', type: 'mop', isDone: false, seriesId: null }] }, recurringSeries: {} };
+    service.get.mockResolvedValue(doc);
     const store = useChoreStore();
-    store.loadDemoChores();
 
-    const today = store.choresByDate[TODAY];
-    expect(today).toHaveLength(3);
-    expect(today.filter((c) => c.isDone)).toHaveLength(2);
+    await store.load();
 
-    const series = Object.values(store.recurringSeries);
-    expect(series).toHaveLength(1);
-    expect(series[0].recurrence).toBe('weekly');
+    expect(store.loaded).toBe(true);
+    expect(store.choresByDate[TODAY].map((c) => c.id)).toEqual(['mine']);
+    expect(localStorage.getItem('manself:chores')).not.toBeNull(); // left alone, just never read
+  });
+
+  it('starts a brand-new user with nothing', async () => {
+    const store = await loadedStore({ choresByDate: {}, recurringSeries: {} });
+    expect(store.choresByDate).toEqual({});
+    expect(store.recurringSeries).toEqual({});
+  });
+
+  it('fills in upcoming repeats, and saves because that changed the chores', async () => {
+    const series = { type: 'trash', state: 'yellow', recurrence: 'weekly', anchorDateKey: keyFor(2) };
+    service.get.mockResolvedValue({ choresByDate: {}, recurringSeries: { s1: series } });
+    const store = useChoreStore();
+
+    await store.load();
+    vi.advanceTimersByTime(400);
+
+    expect(Object.keys(store.choresByDate)).toHaveLength(12);
+    expect(service.save).toHaveBeenCalledOnce();
+  });
+
+  it('does not save straight after loading when nothing changed', async () => {
+    await loadedStore({ choresByDate: { [TODAY]: [{ id: 'a', type: 'mop', isDone: false, seriesId: null }] }, recurringSeries: {} });
+    vi.advanceTimersByTime(5000);
+    expect(service.save).not.toHaveBeenCalled();
+  });
+
+  it('tells the user, and never saves, when the chores could not be loaded', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    service.get.mockRejectedValue(new Error('down'));
+    const store = useChoreStore();
+
+    await store.load();
+    store.addChore(TODAY, { id: 'a', type: CHORE_TYPES.MOP });
+    vi.advanceTimersByTime(5000);
+
+    expect(store.loaded).toBe(false);
+    expect(service.save).not.toHaveBeenCalled();
+    expect(toasts.toasts.value.map((t) => t.message)).toEqual([expect.stringContaining("Couldn't load your chores")]);
+    toasts.toasts.value.forEach((t) => toasts.dismiss(t.id));
+  });
+
+  it('ignores a slow response that arrives after the user signed out', async () => {
+    let resolve;
+    service.get.mockReturnValue(new Promise((r) => (resolve = r)));
+    const store = useChoreStore();
+
+    const pending = store.load();
+    store.reset(); // signed out while the request was still in flight
+    resolve({ choresByDate: { [TODAY]: [{ id: 'old-users', type: 'mop' }] }, recurringSeries: {} });
+    await pending;
+
+    expect(store.choresByDate).toEqual({});
+    expect(store.loaded).toBe(false);
+  });
+
+  it('lets the newest sign-in win when two loads overlap', async () => {
+    let resolveFirst;
+    service.get.mockReturnValueOnce(new Promise((r) => (resolveFirst = r)));
+    service.get.mockResolvedValueOnce({ choresByDate: { [TODAY]: [{ id: 'second', type: 'mop' }] }, recurringSeries: {} });
+    const store = useChoreStore();
+
+    const first = store.load();
+    await store.load();
+    resolveFirst({ choresByDate: { [TODAY]: [{ id: 'first', type: 'mop' }] }, recurringSeries: {} });
+    await first;
+
+    expect(store.choresByDate[TODAY].map((c) => c.id)).toEqual(['second']);
+  });
+});
+
+describe('saving', () => {
+  it('does not save anything before the chores have been loaded', () => {
+    const store = useChoreStore();
+    store.addChore(TODAY, { id: 'a', type: CHORE_TYPES.MOP });
+    vi.advanceTimersByTime(5000);
+    expect(service.save).not.toHaveBeenCalled();
+  });
+
+  it('saves the whole document shortly after a change, not instantly', async () => {
+    const store = await loadedStore();
+    service.save.mockResolvedValue({});
+
+    store.addChore(TODAY, { id: 'a', type: CHORE_TYPES.MOP });
+    expect(service.save).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(400);
+
+    expect(service.save).toHaveBeenCalledOnce();
+    expect(service.save.mock.calls[0][0].choresByDate[TODAY]).toHaveLength(1);
+  });
+
+  it('turns a burst of changes into one save', async () => {
+    const store = await loadedStore();
+    service.save.mockResolvedValue({});
+
+    ['a', 'b', 'c'].forEach((id) => {
+      store.addChore(TODAY, { id, type: CHORE_TYPES.MOP });
+      vi.advanceTimersByTime(100);
+    });
+    vi.advanceTimersByTime(400);
+
+    expect(service.save).toHaveBeenCalledOnce();
+    expect(service.save.mock.calls[0][0].choresByDate[TODAY]).toHaveLength(3);
+  });
+
+  it('flush() sends pending changes right away, and does nothing when there are none', async () => {
+    const store = await loadedStore();
+    service.save.mockResolvedValue({});
+
+    await store.flush();
+    expect(service.save).not.toHaveBeenCalled();
+
+    store.addChore(TODAY, { id: 'a', type: CHORE_TYPES.MOP });
+    await store.flush();
+    expect(service.save).toHaveBeenCalledOnce();
+
+    vi.advanceTimersByTime(5000); // the timer was cancelled, so no second save
+    expect(service.save).toHaveBeenCalledOnce();
+  });
+
+  it('warns when a save fails, and tries again with the next change', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const store = await loadedStore();
+    service.save.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({});
+
+    store.addChore(TODAY, { id: 'a', type: CHORE_TYPES.MOP });
+    await store.flush();
+    expect(toasts.toasts.value.map((t) => t.message)).toEqual([expect.stringContaining("Couldn't save your chores")]);
+    toasts.toasts.value.forEach((t) => toasts.dismiss(t.id));
+
+    store.addChore(TODAY, { id: 'b', type: CHORE_TYPES.MOP });
+    await store.flush();
+    expect(service.save).toHaveBeenCalledTimes(2);
+    expect(service.save.mock.calls[1][0].choresByDate[TODAY]).toHaveLength(2); // nothing was lost
+  });
+});
+
+describe('reset (signing out)', () => {
+  it('empties the store so the next user starts clean', async () => {
+    const store = await loadedStore({ choresByDate: { [TODAY]: [{ id: 'a', type: 'mop' }] }, recurringSeries: { s: { type: 'trash', recurrence: 'daily', anchorDateKey: TODAY } } });
+
+    store.reset();
+
+    expect(store.choresByDate).toEqual({});
+    expect(store.recurringSeries).toEqual({});
+    expect(store.loaded).toBe(false);
+  });
+
+  it('cancels a save that was waiting to go out, so it cannot reach the next user', async () => {
+    const store = await loadedStore();
+    store.addChore(TODAY, { id: 'a', type: CHORE_TYPES.MOP });
+
+    store.reset();
+    vi.advanceTimersByTime(5000);
+
+    expect(service.save).not.toHaveBeenCalled();
   });
 });

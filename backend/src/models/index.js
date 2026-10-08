@@ -4,6 +4,7 @@ import { Board } from './board.model.js';
 import { Task } from './task.model.js';
 import { CalendarEvent } from './calendarEvent.model.js';
 import { Note } from './note.model.js';
+import { ChoreState } from './choreState.model.js';
 
 User.hasMany(Board, { foreignKey: { name: 'userId', allowNull: false }, as: 'boards' });
 Board.belongsTo(User, { foreignKey: { name: 'userId', allowNull: false }, as: 'user' });
@@ -24,4 +25,7 @@ CalendarEvent.belongsTo(User, { foreignKey: { name: 'userId', allowNull: false }
 User.hasMany(Note, { foreignKey: { name: 'userId', allowNull: false }, as: 'notes' });
 Note.belongsTo(User, { foreignKey: { name: 'userId', allowNull: false }, as: 'user' });
 
-export { sequelize, User, Board, Task, CalendarEvent, Note };
+User.hasOne(ChoreState, { foreignKey: { name: 'userId', allowNull: false }, as: 'choreState' });
+ChoreState.belongsTo(User, { foreignKey: { name: 'userId', allowNull: false }, as: 'user' });
+
+export { sequelize, User, Board, Task, CalendarEvent, Note, ChoreState };

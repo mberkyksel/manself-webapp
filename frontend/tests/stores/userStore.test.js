@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
 vi.mock('../../src/services/api.js', () => ({ TOKEN_STORAGE_KEY: 'manself_token', api: {} }));
+vi.mock('../../src/services/choreService.js', () => ({ choreService: { get: vi.fn(), save: vi.fn() } }));
 vi.mock('../../src/services/authService.js', () => ({
   authService: {
     register: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock('../../src/services/authService.js', () => ({
 }));
 
 const { authService } = await import('../../src/services/authService.js');
+const { choreService } = await import('../../src/services/choreService.js');
 const { useUserStore } = await import('../../src/stores/userStore.js');
 const { useChoreStore } = await import('../../src/stores/choreStore.js');
 
@@ -28,6 +30,9 @@ function serverError(message) {
 beforeEach(() => {
   localStorage.clear();
   setActivePinia(createPinia());
+  // Every test starts with a fresh account that has no chores, and no remembered calls.
+  choreService.get.mockReset().mockResolvedValue({ choresByDate: {}, recurringSeries: {} });
+  choreService.save.mockReset().mockResolvedValue({});
 });
 
 describe('login', () => {
@@ -68,7 +73,7 @@ describe('session', () => {
     const store = useUserStore();
     await store.login({ email: USER.email, password: 'pw' });
 
-    store.logout();
+    await store.logout();
 
     expect(store.isAuthenticated).toBe(false);
     expect(store.user).toBeNull();
@@ -97,28 +102,114 @@ describe('session', () => {
   });
 });
 
+const EMPTY = { choresByDate: {}, recurringSeries: {} };
+const DEMO_CHORES = {
+  choresByDate: { '2026-10-07': [{ id: 'd1', type: 'laundry', state: 'colors', isDone: false, seriesId: null }] },
+  recurringSeries: {},
+};
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 describe('demo login', () => {
-  it('logs in, reports isDemo and seeds the browser-local chores', async () => {
+  it('logs in, reports isDemo and tells the server the visitor\'s today', async () => {
     authService.demoLogin.mockResolvedValue({ token: 'demo-tok', user: { ...USER, name: 'Demo User', isDemo: true } });
+    choreService.get.mockResolvedValue(DEMO_CHORES);
     const store = useUserStore();
-    const chores = useChoreStore();
 
     expect(await store.loginAsDemo()).toBe(true);
 
     expect(store.isDemo).toBe(true);
-    expect(Object.keys(chores.choresByDate).length).toBeGreaterThan(0);
+    expect(authService.demoLogin).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+  });
+
+  it('loads the demo\'s chores from the server after logging in', async () => {
+    authService.demoLogin.mockResolvedValue({ token: 'demo-tok', user: { ...USER, isDemo: true } });
+    choreService.get.mockResolvedValue(DEMO_CHORES);
+    const chores = useChoreStore();
+
+    await useUserStore().loginAsDemo();
+    await tick();
+
+    expect(chores.choresByDate['2026-10-07']).toHaveLength(1);
+    expect(chores.loaded).toBe(true);
   });
 
   it('leaves the chores alone when the demo login fails', async () => {
     authService.demoLogin.mockRejectedValue(serverError('Demo mode is not enabled'));
     const store = useUserStore();
-    const chores = useChoreStore();
-    chores.addChore('2026-10-07', { id: 'mine', type: 'mop' });
 
     expect(await store.loginAsDemo()).toBe(false);
 
     expect(store.error).toBe('Demo mode is not enabled');
-    expect(chores.choresByDate['2026-10-07']).toHaveLength(1);
+    expect(choreService.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('chores belong to the signed-in user', () => {
+  // The reported bug: use the demo, log out, register your own account, and
+  // the demo's chores were still there.
+  it('shows a new account none of the demo\'s chores', async () => {
+    authService.demoLogin.mockResolvedValue({ token: 'demo-tok', user: { ...USER, isDemo: true } });
+    authService.register.mockResolvedValue({ token: 'new-tok', user: { ...USER, id: 2, email: 'new@example.test' } });
+    choreService.get.mockResolvedValueOnce(DEMO_CHORES).mockResolvedValueOnce(EMPTY);
+    const store = useUserStore();
+    const chores = useChoreStore();
+
+    await store.loginAsDemo();
+    await tick();
+    expect(Object.keys(chores.choresByDate)).toHaveLength(1);
+
+    await store.logout();
+    expect(chores.choresByDate).toEqual({});
+
+    await store.register({ name: 'New', email: 'new@example.test', password: 'password-123', timezone: 'UTC' });
+    await tick();
+    expect(chores.choresByDate).toEqual({});
+    expect(chores.loaded).toBe(true);
+  });
+
+  it('sends pending chore edits before signing out, then clears them', async () => {
+    authService.login.mockResolvedValue({ token: 'tok', user: USER });
+    choreService.get.mockResolvedValue(EMPTY);
+    choreService.save.mockResolvedValue({});
+    const store = useUserStore();
+    const chores = useChoreStore();
+    await store.login({ email: USER.email, password: 'pw' });
+    await tick();
+
+    chores.addChore('2026-10-07', { id: 'a', type: 'mop' });
+    await store.logout();
+
+    expect(choreService.save).toHaveBeenCalledOnce();
+    expect(chores.choresByDate).toEqual({});
+  });
+
+  it('drops the chores when the session ends any other way (expired token, deleted account)', async () => {
+    authService.login.mockResolvedValue({ token: 'tok', user: USER });
+    authService.deleteAccount.mockResolvedValue({});
+    choreService.get.mockResolvedValue(DEMO_CHORES);
+    const store = useUserStore();
+    const chores = useChoreStore();
+    await store.login({ email: USER.email, password: 'pw' });
+    await tick();
+    expect(chores.loaded).toBe(true);
+
+    await store.deleteAccount({ currentPassword: 'pw' });
+
+    expect(chores.choresByDate).toEqual({});
+    expect(chores.loaded).toBe(false);
+  });
+
+  it('loads the chores for a user restored from a stored token on page load', async () => {
+    localStorage.setItem('manself_token', 'stored');
+    setActivePinia(createPinia());
+    authService.me.mockResolvedValue({ user: USER });
+    choreService.get.mockResolvedValue(DEMO_CHORES);
+    const chores = useChoreStore();
+
+    await useUserStore().fetchCurrentUser();
+    await tick();
+
+    expect(chores.loaded).toBe(true);
   });
 });
 
