@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
 const apiGet = vi.hoisted(() => vi.fn());
-vi.mock('../services/api.js', () => ({ TOKEN_STORAGE_KEY: 'manself_token', api: { get: apiGet } }));
+vi.mock('../../src/services/api.js', () => ({ TOKEN_STORAGE_KEY: 'manself_token', api: { get: apiGet } }));
 
-const { useWeather, DEFAULT_WEATHER_CITY } = await import('./useWeather.js');
-const { useUserStore } = await import('../stores/userStore.js');
+const { useWeather, DEFAULT_WEATHER_CITY } = await import('../../src/composables/useWeather.js');
+const { useUserStore } = await import('../../src/stores/userStore.js');
 
 const REPORT = { location: 'Somewhere', temperature: 10 };
 

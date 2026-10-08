@@ -15,9 +15,9 @@ process.env.JWT_SECRET = 'test-secret';
 process.env.DEMO_MODE = 'true';
 process.env.WEATHER_API_KEY = 'test-weather-key';
 
-const { default: app } = await import('../app.js');
-const { sequelize } = await import('../config/database.js');
-const models = await import('../models/index.js');
+const { default: app } = await import('../src/app.js');
+const { sequelize } = await import('../src/config/database.js');
+const models = await import('../src/models/index.js');
 
 export { app, models };
 

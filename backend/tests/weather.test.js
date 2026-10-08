@@ -2,7 +2,7 @@ import { describe, it, before, after, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { app, closeDatabase } from './helpers.js';
-import { env } from '../config/env.js';
+import { env } from '../src/config/env.js';
 
 const upstreamBody = {
   name: 'Testville',

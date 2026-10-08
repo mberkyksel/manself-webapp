@@ -3,11 +3,11 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 const list = vi.hoisted(() => vi.fn());
-vi.mock('../../services/noteService.js', () => ({
+vi.mock('../../../src/services/noteService.js', () => ({
   noteService: { list, create: vi.fn(), update: vi.fn(), remove: vi.fn() },
 }));
 
-const { default: StickyNotesManager } = await import('./StickyNotesManager.vue');
+const { default: StickyNotesManager } = await import('../../../src/components/dashboard/StickyNotesManager.vue');
 
 const NOTES = [{ id: 1, text: 'hello', color: 'yellow', positionX: 9999, positionY: 340, zIndex: 1 }];
 

@@ -7,10 +7,10 @@ const service = vi.hoisted(() => ({
   update: vi.fn(),
   remove: vi.fn(),
 }));
-vi.mock('../services/taskService.js', () => ({ taskService: service }));
-vi.mock('../services/calendarService.js', () => ({ calendarService: {} }));
+vi.mock('../../src/services/taskService.js', () => ({ taskService: service }));
+vi.mock('../../src/services/calendarService.js', () => ({ calendarService: {} }));
 
-const { useTaskStore } = await import('./taskStore.js');
+const { useTaskStore } = await import('../../src/stores/taskStore.js');
 
 const TASKS = [
   { id: 1, title: 'A', status: 'todo', position: 1 },

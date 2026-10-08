@@ -3,12 +3,12 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 const list = vi.hoisted(() => vi.fn());
-vi.mock('../../services/taskService.js', () => ({
+vi.mock('../../../src/services/taskService.js', () => ({
   taskService: { list, create: vi.fn(), update: vi.fn(), remove: vi.fn() },
 }));
-vi.mock('../../services/calendarService.js', () => ({ calendarService: {} }));
+vi.mock('../../../src/services/calendarService.js', () => ({ calendarService: {} }));
 
-const { default: KanbanBoard } = await import('./KanbanBoard.vue');
+const { default: KanbanBoard } = await import('../../../src/components/kanban/KanbanBoard.vue');
 
 // Wednesday 7 Oct 2026, local noon.
 const task = (id, status, extra = {}) => ({ id, title: `Task ${id}`, status, priority: 'medium', position: id, dueDate: null, ...extra });

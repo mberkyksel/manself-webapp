@@ -4,10 +4,10 @@ import { nextTick } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 
 const burst = vi.hoisted(() => vi.fn());
-vi.mock('../../composables/useConfetti.js', () => ({ useConfetti: () => ({ burst }) }));
+vi.mock('../../../src/composables/useConfetti.js', () => ({ useConfetti: () => ({ burst }) }));
 
-const { default: ChoresCelebration } = await import('./ChoresCelebration.vue');
-const { useChoreStore } = await import('../../stores/choreStore.js');
+const { default: ChoresCelebration } = await import('../../../src/components/dashboard/ChoresCelebration.vue');
+const { useChoreStore } = await import('../../../src/stores/choreStore.js');
 
 const TODAY = '2026-10-07';
 

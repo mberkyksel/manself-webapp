@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useToast } from './useToast.js';
+import { useToast } from '../../src/composables/useToast.js';
 
 const toast = useToast();
 
