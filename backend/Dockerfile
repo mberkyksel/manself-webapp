@@ -5,10 +5,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-COPY . .
+COPY --chown=node:node . .
 
 ENV NODE_ENV=production
 EXPOSE 3000
+
+# Nothing here needs root: migrations and the API only talk to Postgres.
+USER node
 
 # Migrations run on every start, not just fresh installs, so `docker compose
 # up` after pulling new migration files just works - already-applied
