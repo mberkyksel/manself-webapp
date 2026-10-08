@@ -1,6 +1,6 @@
 # manself-webapp
 
-A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google Calendar integration planned), a Jira-style kanban task board, a drag-to-schedule recurring household chores widget, freely-positioned sticky notes, and a due-today/overdue todo list - with full account management (register, login, profile/email/password updates, account deletion) behind it.
+A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google Calendar integration planned), a focus-style kanban task board (Now / Next / Done, with progress), a drag-to-schedule recurring household chores widget, freely-positioned sticky notes, and a due-today/overdue todo list - with full account management (register, login, profile/email/password updates, account deletion) behind it.
 
 ![The manself dashboard: ten-day calendar, chores widget, weather, clock, todos and sticky notes](docs/screenshots/dashboard.png)
 
@@ -13,7 +13,7 @@ A two-minute tour:
 1. **Calendar.** The top card shows the next ten days. Press **+ Add** on a day to create an event, or **Full month** for the whole grid.
 2. **Chores.** Drag an icon from the *Home Widget* (top right) onto a day. On a chore badge: click toggles done, double-click removes it (an *Undo* toast appears), right-click cycles repeat (daily / weekly).
 3. **Celebration.** Today is one chore short of done. Click the laundry badge in *Today's Chores* to finish the day and get the confetti.
-4. **Kanban board.** Drag *Prepare Friday demo slides* into **Done**. Deleting a task asks for confirmation first.
+4. **Task board.** Tick the circle on *Prepare Friday demo slides* (or drag it into **Done**): it gets a DONE stamp and the progress bar moves. The overdue and due-today chips at the top show what needs attention. Deleting a task asks for confirmation first.
 5. **Sticky notes.** On wide screens, drag a note anywhere or add one with **+ Note**. Below 1440 px wide (phones, tablets, small laptops) they turn into a bottom sheet, so they never cover the page.
 6. **Weather.** The card uses your browser location. If you block it, it falls back to a saved city, then to Berlin.
 7. **Settings.** Open the menu (top-left logo), then **Settings**, to change the name or weather city. Email, password and deletion are locked on the demo account, and the page says so.
@@ -162,7 +162,7 @@ End-to-end functional, not just a skeleton:
 - **Auth**: register, login, a settings page (`/app/settings`) to update name/email/password and delete the account (all destructive/credential-changing actions require the current password), session-expiry handling (expired/invalid tokens redirect to login instead of failing silently)
 - **Dashboard**: welcome banner, clock, weather (browser geolocation, falling back to a saved city or a default; daily-quota API), branded favicon/wordmark, copyright footer
 - **Calendar**: compact and full-month views, event CRUD, optional task linking
-- **Kanban board**: task CRUD, drag-and-drop reordering across columns (mouse and touch, via Pointer Events)
+- **Task board**: Now / Next / Done lanes with a progress bar, overdue and due-today chips, friendly due-date labels, one-tap completion with a DONE stamp, a collapsing Done lane, and drag-and-drop across lanes (mouse and touch, via Pointer Events)
 - **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
 - **Sticky notes**: free-drag positioning from 1440 px wide up, a stacked bottom-sheet list below that (no free positioning there - they would cover the page)
 - **Today's Todos**: due-today and overdue tasks, inline complete toggle
