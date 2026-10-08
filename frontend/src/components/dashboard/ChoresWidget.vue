@@ -328,7 +328,7 @@ const legendItems = [
   @apply mt-0 max-h-0 overflow-hidden opacity-0 transition-all duration-300;
 }
 .chores-widget__legend--open {
-  @apply mt-3 max-h-[26rem] rounded-xl border border-amber-400/20 bg-amber-400/10 p-2 opacity-100;
+  @apply mt-3 max-h-[40rem] rounded-xl border border-amber-400/20 bg-amber-400/10 p-2 opacity-100;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
