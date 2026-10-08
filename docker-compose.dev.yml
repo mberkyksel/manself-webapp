@@ -1,0 +1,16 @@
+# Extra ports for developing outside Docker: run the backend and frontend
+# with npm on your machine and only Postgres in a container.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
+#
+# Tip: put COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml in your
+# local .env and a plain `docker compose up -d postgres` does the same.
+
+services:
+  postgres:
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+
+  backend:
+    ports:
+      - '${BACKEND_PORT:-3000}:3000'

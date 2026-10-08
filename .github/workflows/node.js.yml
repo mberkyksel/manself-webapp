@@ -87,3 +87,30 @@ jobs:
     - name: Run Frontend Tests
       run: npm test --if-present
       working-directory: frontend
+
+  # 3. DOCKER SMOKE TEST
+  # Runs the exact path a stranger takes (`docker compose up` with no .env, no
+  # keys) so the zero-config setup can't quietly break.
+  docker-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Start the stack with no configuration
+      run: docker compose up --build -d --wait --wait-timeout 240
+
+    - name: Check the app answers through nginx
+      run: |
+        curl -fsS http://localhost:8080/ | grep -q 'id="app"'
+        curl -fsS http://localhost:8080/api/config | grep -q '"demoEnabled":true'
+        curl -fsS -X POST http://localhost:8080/api/auth/demo | grep -q '"isDemo":true'
+        curl -fsS "http://localhost:8080/api/weather?city=Berlin" | grep -q '"location":"Berlin"'
+
+    - name: Show logs if something failed
+      if: failure()
+      run: docker compose logs
+
+    - name: Tear down
+      if: always()
+      run: docker compose down -v

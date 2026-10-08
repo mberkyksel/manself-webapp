@@ -2,6 +2,45 @@ import { env } from '../config/env.js';
 
 const OPENWEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather';
 
+// Used when no OpenWeather key is configured, so the app shows real weather
+// with zero setup. Open-Meteo needs no key and is free for non-commercial use.
+const OPEN_METEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
+const OPEN_METEO_GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
+
+// WMO weather code -> [OpenWeather icon number, description]. The frontend's
+// icons are keyed on OpenWeather's codes ('01d', '10n', ...), so the other
+// provider's answer is translated to that vocabulary.
+const WMO_CODES = {
+  0: ['01', 'clear sky'],
+  1: ['02', 'mainly clear'],
+  2: ['03', 'partly cloudy'],
+  3: ['04', 'overcast clouds'],
+  45: ['50', 'fog'],
+  48: ['50', 'rime fog'],
+  51: ['09', 'light drizzle'],
+  53: ['09', 'drizzle'],
+  55: ['09', 'heavy drizzle'],
+  56: ['09', 'freezing drizzle'],
+  57: ['09', 'freezing drizzle'],
+  61: ['10', 'light rain'],
+  63: ['10', 'rain'],
+  65: ['10', 'heavy rain'],
+  66: ['10', 'freezing rain'],
+  67: ['10', 'freezing rain'],
+  71: ['13', 'light snow'],
+  73: ['13', 'snow'],
+  75: ['13', 'heavy snow'],
+  77: ['13', 'snow grains'],
+  80: ['09', 'rain showers'],
+  81: ['09', 'rain showers'],
+  82: ['09', 'violent rain showers'],
+  85: ['13', 'snow showers'],
+  86: ['13', 'heavy snow showers'],
+  95: ['11', 'thunderstorm'],
+  96: ['11', 'thunderstorm with hail'],
+  99: ['11', 'thunderstorm with hail'],
+};
+
 // OpenWeatherMap's free tier caps out well below what unlimited traffic
 // would need, so we budget a fixed number of real calls per day (shared
 // across all locations - that's a genuinely global resource) and serve
@@ -96,6 +135,61 @@ async function fetchFromOpenWeather({ lat, lon, city }) {
   };
 }
 
+async function fetchJson(url) {
+  const response = await fetch(url);
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.reason || data.message || 'Weather lookup failed');
+    err.status = response.status >= 500 ? 503 : response.status;
+    throw err;
+  }
+  return data;
+}
+
+async function fetchFromOpenMeteo({ lat, lon, city }) {
+  let latitude = lat;
+  let longitude = lon;
+  let location = 'Your location';
+  let country;
+
+  if (city) {
+    const geocodeUrl = new URL(OPEN_METEO_GEOCODING_URL);
+    geocodeUrl.searchParams.set('name', city);
+    geocodeUrl.searchParams.set('count', '1');
+    geocodeUrl.searchParams.set('language', 'en');
+    const { results } = await fetchJson(geocodeUrl);
+    if (!results?.length) {
+      const err = new Error('city not found');
+      err.status = 404;
+      throw err;
+    }
+    ({ latitude, longitude, name: location, country_code: country } = results[0]);
+  }
+
+  const url = new URL(OPEN_METEO_FORECAST_URL);
+  url.searchParams.set('latitude', latitude);
+  url.searchParams.set('longitude', longitude);
+  url.searchParams.set(
+    'current',
+    'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day'
+  );
+  url.searchParams.set('wind_speed_unit', 'ms');
+  url.searchParams.set('timezone', 'auto');
+  const { current } = await fetchJson(url);
+
+  const [iconNumber, description] = WMO_CODES[current.weather_code] ?? ['03', 'cloudy'];
+  return {
+    location,
+    country,
+    temperature: Math.round(current.temperature_2m),
+    feelsLike: Math.round(current.apparent_temperature),
+    humidity: current.relative_humidity_2m,
+    windSpeed: current.wind_speed_10m,
+    description,
+    icon: `${iconNumber}${current.is_day ? 'd' : 'n'}`,
+  };
+}
+
 export async function getCurrentWeather(req, res, next) {
   const { lat, lon } = req.query;
   const city = typeof req.query.city === 'string' ? req.query.city.trim() : '';
@@ -109,6 +203,14 @@ export async function getCurrentWeather(req, res, next) {
 
   try {
     resetDailyCounterIfNeeded();
+
+    // Keyless fallback: Open-Meteo has its own limits and no per-day budget
+    // to track here.
+    if (!env.weatherApiKey) {
+      const result = await fetchFromOpenMeteo({ lat, lon, city });
+      lastResponseByLocation.set(key, result);
+      return res.json(result);
+    }
 
     if (callCount >= MAX_CALLS_PER_DAY) {
       const cached = lastResponseByLocation.get(key);

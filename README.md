@@ -4,9 +4,23 @@ A multi-purpose daily-life dashboard: welcome/weather/clock, a calendar (Google 
 
 ![The manself dashboard: ten-day calendar, chores widget, weather, clock, todos and sticky notes](docs/screenshots/dashboard.png)
 
+## Quick start
+
+You only need [Docker](https://docs.docker.com/get-docker/) (Compose 2.24 or newer). No `.env`, no keys, no database to set up:
+
+```bash
+git clone https://github.com/mberkyksel/manself-webapp.git
+cd manself-webapp
+docker compose up --build
+```
+
+Then open **http://localhost:8080** and press **Try the demo**. The first build takes a minute or two.
+
+Stop it with `Ctrl+C`. `docker compose down` removes the containers and keeps your data; add `-v` to wipe the database too.
+
 ## Try the demo
 
-The quickest way to see everything is the one-click demo account. Start the app (see [Docker](#docker) or [Setup](#setup)), open it, and press **Try the demo**. It needs `DEMO_MODE=true`, which `.env.example` already sets. See [Demo mode](#demo-mode) for what the account contains.
+The quickest way to see everything is the one-click demo account. Start the app (see [Quick start](#quick-start)), open it, and press **Try the demo**. Demo mode is on by default with Docker. See [Demo mode](#demo-mode) for what the account contains.
 
 A two-minute tour:
 
@@ -26,28 +40,32 @@ Resize the window (or open it on a phone) to see the mobile layout.
 - **Backend**: Node.js + Express (ES Modules)
 - **Database**: PostgreSQL via Sequelize (models + migrations)
 
-## Prerequisites
+## Local development
+
+To work on the code, run the backend and frontend with npm and keep only Postgres in Docker.
+
+### Prerequisites
 
 - Node.js 20+ and npm
 - A running PostgreSQL instance (via Docker Compose, or a local install)
 
-## Setup
+### Setup
 
-1. Copy the env template and fill in real values:
+1. Copy the env template:
 
    ```bash
    cp .env.example backend/.env
    ```
 
-   At minimum, set `DATABASE_URL` to point at your Postgres instance.
+   Set `DATABASE_URL` to point at your Postgres instance. `JWT_SECRET` is optional while `DEMO_MODE=true` (a random one is made on each start); generate a real one with `openssl rand -hex 32` if you turn demo mode off.
 
-2. Start Postgres. Easiest via Docker Compose:
+2. Start Postgres. Easiest via Docker Compose, using the dev file that publishes its port:
 
    ```bash
-   docker compose up -d postgres
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
    ```
 
-   This starts Postgres 16 on `localhost:5432` with a persisted `postgres_data` volume, using the `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` values from `.env.example` (defaults: `postgres` / `postgres` / `manself_dev`) unless overridden by a root-level `.env`.
+   This starts Postgres 16 on `localhost:5432` with a persisted `postgres_data` volume, using the `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` values from `.env.example` (defaults: `postgres` / `postgres` / `manself_dev`) unless overridden by a root-level `.env`. If something else already uses port 5432 (a local Postgres, for example), set `POSTGRES_PORT=5433` in that root `.env` and use the same port in `DATABASE_URL`. To make a plain `docker compose up -d postgres` do the same, add `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml` to that `.env`.
 
    Without Docker, create the database manually instead:
 
@@ -69,7 +87,7 @@ Resize the window (or open it on a phone) to see the mobile layout.
    npm run migrate
    ```
 
-## Running locally
+### Running locally
 
 Backend (from `backend/`):
 
@@ -124,7 +142,7 @@ Covers the chore store (recurrence, skipped days, undo), toasts, confirm dialogs
 **Backend** (Node's built-in test runner + supertest) runs the real Express app against a real Postgres, so the migrations and their cascading deletes are exercised. It uses a **separate database** and refuses to run if the database name doesn't contain `test`, because the tests truncate tables:
 
 ```bash
-docker exec manself-postgres createdb -U postgres manself_test     # once
+docker compose exec postgres createdb -U postgres manself_test     # once
 export TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/manself_test   # adjust the port if you changed POSTGRES_PORT
 cd backend
 npm run test:setup   # runs the migrations on the test database
@@ -160,7 +178,7 @@ All taken from the demo account.
 End-to-end functional, not just a skeleton:
 
 - **Auth**: register, login, a settings page (`/app/settings`) to update name/email/password and delete the account (all destructive/credential-changing actions require the current password), session-expiry handling (expired/invalid tokens redirect to login instead of failing silently)
-- **Dashboard**: welcome banner, clock, weather (browser geolocation, falling back to a saved city or a default; daily-quota API), branded favicon/wordmark, copyright footer
+- **Dashboard**: welcome banner, clock, weather (browser geolocation, falling back to a saved city or a default; OpenWeather with a daily-quota budget, or keyless Open-Meteo when no API key is set), branded favicon/wordmark, copyright footer
 - **Calendar**: compact and full-month views, event CRUD, optional task linking
 - **Task board**: Now / Next / Done lanes with a progress bar, overdue and due-today chips, friendly due-date labels, one-tap completion with a DONE stamp, a collapsing Done lane, and drag-and-drop across lanes (mouse and touch, via Pointer Events)
 - **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
@@ -182,21 +200,22 @@ With `DEMO_MODE=true` (set in `.env`, see `.env.example`) the login and register
 
 ## Docker
 
-`docker-compose.yml` runs the full stack: Postgres, the backend API, and the frontend (built and served via nginx).
+`docker-compose.yml` runs the whole stack: Postgres, the backend API, and the frontend (built, then served by nginx, which also proxies `/api/*` to the backend so the browser only ever talks to one origin - see `frontend/nginx.conf`).
 
 ```bash
-cp .env.example .env   # fill in JWT_SECRET at minimum
-docker compose up -d --build
+docker compose up --build        # add -d to run in the background
 ```
 
-- Frontend: `http://localhost:8080` (nginx serves the Vite production build and proxies `/api/*` to the backend, same-origin - see `frontend/nginx.conf`)
-- Backend (direct): `http://localhost:3000`
-- Postgres: `localhost:5432`
+It is set up so that nothing has to be configured:
 
-The backend container runs pending migrations on every start before launching the server, so pulling new migration files just needs a restart - no manual `npm run migrate` step. Override the default host ports with `BACKEND_PORT` / `FRONTEND_PORT` / `POSTGRES_PORT` in `.env` if they collide with something else already running.
+- **Only the web app's port is published**: `http://localhost:8080` (change it with `FRONTEND_PORT`). The API and Postgres stay inside Docker's network, so nothing clashes with a database or dev server you already run.
+- **Demo mode is on** (`DEMO_MODE=true`), so the login page has **Try the demo**.
+- **`JWT_SECRET` can be left out**: in demo mode a random one is generated on each start (everyone is signed out when the backend restarts). It is *required* as soon as `DEMO_MODE` is off.
+- **Weather needs no key**: without `WEATHER_API_KEY` the backend uses [Open-Meteo](https://open-meteo.com/); with a key it uses OpenWeather.
+- The backend waits for Postgres to be healthy, runs any pending migrations on every start, and the frontend waits for the backend to be healthy, so the first click always works.
 
-To run Postgres only, for local (non-Docker) frontend/backend development:
+To change anything, copy `.env.example` to `.env` next to `docker-compose.yml` (optional; it is picked up automatically) or set variables in your shell.
 
-```bash
-docker compose up -d postgres
-```
+**This is a demo setup, not a production one.** Everyone who clicks *Try the demo* shares one account that is reset on each login. For a real deployment set `DEMO_MODE=false`, a real `JWT_SECRET`, and your own database credentials.
+
+**Developing outside Docker?** `docker-compose.dev.yml` publishes Postgres (`POSTGRES_PORT`, default 5432) and the backend (`BACKEND_PORT`, default 3000) for that; see [Local development](#local-development).

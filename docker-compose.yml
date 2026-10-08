@@ -1,53 +1,69 @@
+# One command, no setup:
+#
+#   docker compose up --build
+#
+# then open http://localhost:8080 and press "Try the demo".
+#
+# Nothing needs configuring: demo mode is on, the JWT secret is generated for
+# the run, weather uses a keyless provider, and only the web port is published
+# (no clashes with a Postgres or dev server you already have running).
+# Everything is overridable through a .env file or your shell - see
+# .env.example. Needs Docker Compose 2.24 or newer (optional env_file).
+
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: manself-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-manself_dev}
-    ports:
-      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-manself_dev}']
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   backend:
     build:
       context: ./backend
-    container_name: manself-backend
     restart: unless-stopped
+    # Optional: a .env file (copied from .env.example) is used if present.
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
-      # Overrides the .env file's DATABASE_URL (which points at localhost,
-      # for running the backend outside Docker) with the compose network's
-      # internal hostname for the postgres service. NODE_ENV is pinned here
-      # too so a dev-oriented .env (NODE_ENV=development, per .env.example)
-      # can't accidentally override the image's production mode.
+      # Point at the compose network's Postgres, whatever a local .env says.
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-manself_dev}
+      # Pinned so a dev-oriented .env (NODE_ENV=development) can't switch the
+      # container out of production mode.
       NODE_ENV: production
       PORT: 3000
-    ports:
-      - '${BACKEND_PORT:-3000}:3000'
+      # On by default so a reviewer can click straight in. Set DEMO_MODE=false
+      # (and a real JWT_SECRET) for anything that is not a demo.
+      DEMO_MODE: ${DEMO_MODE:-true}
+      JWT_SECRET: ${JWT_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/health || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   frontend:
     build:
       context: ./frontend
-    container_name: manself-frontend
     restart: unless-stopped
     ports:
       - '${FRONTEND_PORT:-8080}:80'
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
