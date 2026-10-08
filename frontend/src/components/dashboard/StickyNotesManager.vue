@@ -7,15 +7,19 @@ import { useConfirm } from '../../composables/useConfirm.js';
 const noteStore = useNoteStore();
 const { confirm } = useConfirm();
 
-// Free-floating positioned notes don't fit a phone screen - below Tailwind's
-// sm breakpoint (640px, unmodified default) notes render as a stacked list
-// in a bottom sheet instead (see StickyNote.vue's `stacked` prop).
-const isMobile = ref(false);
+// Free-floating notes sit on top of the page, so they only make sense where
+// there is empty space for them: a 200px note against the right edge clears
+// the (up to 1024px wide, centred) content from 1440px up. Below that - phones,
+// tablets and small laptops - notes are a stacked list in a bottom sheet
+// instead (see StickyNote.vue's `stacked` prop), so nothing is ever covered.
+const FLOATING_NOTES_MIN_WIDTH = 1440;
+
+const isSheetMode = ref(false);
 const panelOpen = ref(false);
 let mql = null;
 
-function updateIsMobile(event) {
-  isMobile.value = event.matches;
+function updateSheetMode(event) {
+  isSheetMode.value = event.matches;
 }
 
 // An empty note has nothing to lose, so it goes without asking.
@@ -33,18 +37,18 @@ async function requestRemoveNote(note) {
 
 onMounted(() => {
   noteStore.fetchNotes();
-  mql = window.matchMedia('(max-width: 639.98px)');
-  isMobile.value = mql.matches;
-  mql.addEventListener('change', updateIsMobile);
+  mql = window.matchMedia(`(max-width: ${FLOATING_NOTES_MIN_WIDTH - 0.02}px)`);
+  isSheetMode.value = mql.matches;
+  mql.addEventListener('change', updateSheetMode);
 });
 
-onUnmounted(() => mql?.removeEventListener('change', updateIsMobile));
+onUnmounted(() => mql?.removeEventListener('change', updateSheetMode));
 </script>
 
 <template>
   <Teleport to="body">
     <!-- Desktop/tablet: free-floating, draggable notes -->
-    <div v-if="!isMobile" class="sticky-notes-layer">
+    <div v-if="!isSheetMode" class="sticky-notes-layer">
       <button
         type="button"
         class="sticky-notes-layer__add"
@@ -67,7 +71,7 @@ onUnmounted(() => mql?.removeEventListener('change', updateIsMobile));
       />
     </div>
 
-    <!-- Mobile: stacked bottom sheet, no free positioning/dragging -->
+    <!-- Narrower screens: stacked bottom sheet, no free positioning/dragging -->
     <template v-else>
       <button type="button" class="sticky-notes-toggle" @click="panelOpen = !panelOpen">
         🗒️ Notes ({{ noteStore.notes.length }}/5)

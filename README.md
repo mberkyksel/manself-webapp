@@ -14,7 +14,7 @@ A two-minute tour:
 2. **Chores.** Drag an icon from the *Home Widget* (top right) onto a day. On a chore badge: click toggles done, double-click removes it (an *Undo* toast appears), right-click cycles repeat (daily / weekly).
 3. **Celebration.** Today is one chore short of done. Click the laundry badge in *Today's Chores* to finish the day and get the confetti.
 4. **Kanban board.** Drag *Prepare Friday demo slides* into **Done**. Deleting a task asks for confirmation first.
-5. **Sticky notes.** Drag a note anywhere, or add one with **+ Note**. Below 640 px wide they turn into a bottom sheet.
+5. **Sticky notes.** On wide screens, drag a note anywhere or add one with **+ Note**. Below 1440 px wide (phones, tablets, small laptops) they turn into a bottom sheet, so they never cover the page.
 6. **Weather.** The card uses your browser location. If you block it, it falls back to a saved city, then to Berlin.
 7. **Settings.** Open the menu (top-left logo), then **Settings**, to change the name or weather city. Email, password and deletion are locked on the demo account, and the page says so.
 
@@ -164,7 +164,7 @@ End-to-end functional, not just a skeleton:
 - **Calendar**: compact and full-month views, event CRUD, optional task linking
 - **Kanban board**: task CRUD, drag-and-drop reordering across columns (mouse and touch, via Pointer Events)
 - **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
-- **Sticky notes**: free-drag positioning on desktop/tablet, a stacked bottom-sheet list on mobile (no free positioning there - not enough room)
+- **Sticky notes**: free-drag positioning from 1440 px wide up, a stacked bottom-sheet list below that (no free positioning there - they would cover the page)
 - **Today's Todos**: due-today and overdue tasks, inline complete toggle
 - **Feedback**: toast notifications, confirm dialogs before destructive actions, and an *Undo* for removed chores; helpful empty states
 - **Public site**: landing page with a product preview, 404 page, one-click demo login

@@ -30,7 +30,7 @@ const features = [
   {
     icon: StickyNote,
     title: 'Sticky notes',
-    text: 'Pin quick thoughts anywhere on screen. On a phone they tuck away into a tidy bottom sheet.',
+    text: 'Pin quick thoughts anywhere on a big screen. On smaller ones they tuck away into a tidy bottom sheet.',
   },
   {
     icon: CloudSun,

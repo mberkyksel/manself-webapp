@@ -71,7 +71,7 @@ function buildEvents(demoSlidesTaskId) {
 // position to the viewport, so this pins the pile to the right-hand edge at
 // any screen width instead of covering the welcome message in the middle.
 const NOTES = [
-  { text: 'Welcome to manself! Drag me anywhere.', color: 'yellow', positionX: 9999, positionY: 340 },
+  { text: 'Welcome to manself! Jot things down here.', color: 'yellow', positionX: 9999, positionY: 340 },
   { text: 'Groceries: oat milk, eggs, basil', color: 'cyan', positionX: 9999, positionY: 450 },
   { text: 'Call mum on Sunday', color: 'green', positionX: 9999, positionY: 560 },
 ];
