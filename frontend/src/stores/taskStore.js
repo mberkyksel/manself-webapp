@@ -3,6 +3,10 @@ import { taskService } from '../services/taskService.js';
 import { useCalendarStore } from './calendarStore.js';
 import { useToast } from '../composables/useToast.js';
 
+// How long a just-finished task keeps playing its "DONE" stamp animation.
+const STAMP_MS = 700;
+let stampTimer = null;
+
 export const useTaskStore = defineStore('task', {
   state: () => ({
     tasks: [],
@@ -11,6 +15,10 @@ export const useTaskStore = defineStore('task', {
     // Id of the task currently being dragged, shared across columns so any
     // column can accept the drop regardless of which one it started in.
     draggingTaskId: null,
+    // Task that was just marked done, so its card can play the stamp. It lives
+    // here because finishing a task moves its card to another lane, which is a
+    // new component instance that can't tell a fresh completion from a reload.
+    justCompletedId: null,
   }),
 
   getters: {
@@ -25,6 +33,14 @@ export const useTaskStore = defineStore('task', {
 
     stopDragging() {
       this.draggingTaskId = null;
+    },
+
+    flagCompleted(taskId) {
+      this.justCompletedId = taskId;
+      clearTimeout(stampTimer);
+      stampTimer = setTimeout(() => {
+        this.justCompletedId = null;
+      }, STAMP_MS);
     },
 
     async fetchTasks() {
@@ -59,6 +75,7 @@ export const useTaskStore = defineStore('task', {
 
       const previous = { ...task };
       Object.assign(task, payload);
+      if (payload.status === 'done' && previous.status !== 'done') this.flagCompleted(id);
 
       try {
         await taskService.update(id, payload);
@@ -144,6 +161,7 @@ export const useTaskStore = defineStore('task', {
       const previousPosition = task.position;
       task.status = status;
       task.position = position;
+      if (status === 'done' && previousStatus !== 'done') this.flagCompleted(taskId);
 
       try {
         await taskService.update(taskId, { status, position });

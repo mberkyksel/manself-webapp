@@ -14,8 +14,8 @@ const features = [
   },
   {
     icon: SquareKanban,
-    title: 'Kanban board',
-    text: 'Drag tasks between To Do, In Progress and Done, with priorities and due dates on every card.',
+    title: 'Task board',
+    text: 'See what to do now and next, tick tasks off for a satisfying DONE stamp, and watch the progress bar fill.',
   },
   {
     icon: House,
