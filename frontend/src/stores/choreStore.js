@@ -143,10 +143,23 @@ export const useChoreStore = defineStore('chore', {
       this.materializeSeries();
     },
 
+    // Drops a series' not-yet-done occurrences after a given day, so a changed
+    // repeat rule can regenerate them. Done ones are history and stay.
+    dropOpenOccurrencesAfter(seriesId, dateKey) {
+      const next = {};
+      for (const [key, chores] of Object.entries(this.choresByDate)) {
+        const kept = key > dateKey ? chores.filter((c) => c.seriesId !== seriesId || c.isDone) : chores;
+        if (kept.length > 0) next[key] = kept;
+      }
+      this.choresByDate = next;
+    },
+
     // Cycles a chore's repeat rule: none -> daily -> weekly -> none. Turning
-    // it on starts a series anchored to this occurrence's date/type/state;
-    // turning it off just stops future generation, it never deletes
-    // occurrences that already exist (including this one).
+    // it on starts a series anchored to this occurrence's date/type/state.
+    // Switching between daily and weekly regenerates the upcoming occurrences
+    // under the new rule (otherwise the old daily ones would linger for a
+    // month); turning repeat off just stops future generation, it never
+    // deletes occurrences that already exist (including this one).
     cycleChoreRecurrence(dateKey, choreId) {
       const dayChores = this.choresByDate[dateKey];
       const chore = dayChores?.find((c) => c.id === choreId);
@@ -164,6 +177,9 @@ export const useChoreStore = defineStore('chore', {
       }
 
       const seriesId = chore.seriesId ?? crypto.randomUUID();
+      if (current !== 'none') this.dropOpenOccurrencesAfter(seriesId, dateKey);
+      
+
       this.recurringSeries = {
         ...this.recurringSeries,
         [seriesId]: {
@@ -176,7 +192,7 @@ export const useChoreStore = defineStore('chore', {
       };
       this.choresByDate = {
         ...this.choresByDate,
-        [dateKey]: dayChores.map((c) => (c.id === choreId ? { ...c, seriesId } : c)),
+        [dateKey]: this.choresByDate[dateKey].map((c) => (c.id === choreId ? { ...c, seriesId } : c)),
       };
       this.materializeSeries();
     },

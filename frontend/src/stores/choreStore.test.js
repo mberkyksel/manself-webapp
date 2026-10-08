@@ -18,23 +18,12 @@ function occurrences(store, seriesId) {
     .sort();
 }
 
-// The UI only reaches "weekly" by cycling through "daily" first, which would
-// pre-fill 30 daily occurrences (see the todo below). To test weekly
-// generation on its own, the weekly series is set up directly.
+// Builds a series the way the UI does: right-click cycles none -> daily -> weekly.
 function startSeries(store, recurrence) {
   store.addChore(TODAY, { id: 'c1', type: CHORE_TYPES.TRASH, state: 'grey' });
-  if (recurrence === 'daily') {
-    store.cycleChoreRecurrence(TODAY, 'c1');
-    return Object.keys(store.recurringSeries)[0];
-  }
-
-  const seriesId = 'weekly-series';
-  store.recurringSeries = {
-    [seriesId]: { type: CHORE_TYPES.TRASH, state: 'grey', recurrence: 'weekly', anchorDateKey: TODAY },
-  };
-  store.choresByDate = { [TODAY]: store.choresByDate[TODAY].map((c) => ({ ...c, seriesId })) };
-  store.materializeSeries();
-  return seriesId;
+  store.cycleChoreRecurrence(TODAY, 'c1');
+  if (recurrence === 'weekly') store.cycleChoreRecurrence(TODAY, 'c1');
+  return Object.keys(store.recurringSeries)[0];
 }
 
 beforeEach(() => {
@@ -137,10 +126,64 @@ describe('recurrence', () => {
     expect(store.choresByDate[keyFor(60)]).toBeUndefined();
   });
 
-  // Known quirk, not fixed here: switching a series from daily to weekly keeps
-  // the 30 days of daily occurrences already created and only adds weekly ones
-  // after them, so the calendar still shows the chore every day for a month.
-  it.todo('switching a series from daily to weekly leaves only the weekly occurrences');
+  describe('switching between daily and weekly', () => {
+    it('leaves only the weekly occurrences, not the daily ones created before', () => {
+      const store = useChoreStore();
+      const seriesId = startSeries(store, 'daily');
+      expect(occurrences(store, seriesId)).toHaveLength(31);
+
+      store.cycleChoreRecurrence(TODAY, 'c1'); // daily -> weekly
+
+      const dates = occurrences(store, seriesId);
+      expect(dates).toHaveLength(13);
+      expect(dates).toEqual([0, 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84].map(keyFor));
+      expect(store.choresByDate[keyFor(1)]).toBeUndefined();
+    });
+
+    it('keeps done occurrences as history', () => {
+      const store = useChoreStore();
+      startSeries(store, 'daily');
+      const doneDay = keyFor(3);
+      store.toggleChoreDone(doneDay, store.choresByDate[doneDay][0].id);
+
+      store.cycleChoreRecurrence(TODAY, 'c1'); // daily -> weekly
+
+      expect(store.choresByDate[doneDay]).toHaveLength(1);
+      expect(store.choresByDate[doneDay][0].isDone).toBe(true);
+    });
+
+    it('only regenerates from the occurrence that was clicked, leaving earlier days alone', () => {
+      const store = useChoreStore();
+      const seriesId = startSeries(store, 'daily');
+
+      store.cycleChoreRecurrence(keyFor(4), store.choresByDate[keyFor(4)][0].id); // daily -> weekly, from day 4
+
+      const dates = occurrences(store, seriesId);
+      expect(dates.slice(0, 5)).toEqual([0, 1, 2, 3, 4].map(keyFor));
+      expect(dates.slice(5, 8)).toEqual([11, 18, 25].map(keyFor));
+    });
+
+    it('does not touch other series or one-off chores on those days', () => {
+      const store = useChoreStore();
+      startSeries(store, 'daily');
+      store.addChore(keyFor(5), { id: 'oneoff', type: CHORE_TYPES.MOP });
+
+      store.cycleChoreRecurrence(TODAY, 'c1'); // daily -> weekly
+
+      expect(store.choresByDate[keyFor(5)].map((c) => c.id)).toEqual(['oneoff']);
+    });
+
+    it('fills every one of the next 30 days again when cycled back round to daily', () => {
+      const store = useChoreStore();
+      startSeries(store, 'weekly');
+      store.cycleChoreRecurrence(TODAY, 'c1'); // weekly -> off (keeps what exists)
+      store.cycleChoreRecurrence(TODAY, 'c1'); // off -> daily
+
+      for (let day = 0; day <= 30; day++) {
+        expect(store.choresByDate[keyFor(day)]).toHaveLength(1);
+      }
+    });
+  });
 
   it('fills the window forward as days pass', () => {
     const store = useChoreStore();
