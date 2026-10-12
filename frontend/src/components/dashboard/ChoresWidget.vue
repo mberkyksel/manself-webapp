@@ -244,7 +244,8 @@ const legendItems = [
         </ul>
         <p class="chores-widget__legend-hint">
           Drag any icon onto a day or the Welcome Panel. Click a scheduled badge to mark it done, double-click to
-          remove it.
+          remove it. Right-click it (long-press on a phone) to make it repeat: daily, on certain weekdays, every
+          two weeks or monthly.
         </p>
       </div>
     </div>

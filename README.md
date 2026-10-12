@@ -30,7 +30,7 @@ The quickest way to see everything is the one-click demo account. Start the app 
 A two-minute tour:
 
 1. **Calendar.** The top card shows the next ten days. Press **+ Add** on a day to create an event, or **Full month** for the whole grid.
-2. **Chores.** Drag an icon from the *Home Widget* (top right) onto a day. On a chore badge: click toggles done, double-click removes it (an *Undo* toast appears), right-click cycles repeat (daily / weekly).
+2. **Chores.** Drag an icon from the *Home Widget* (top right) onto a day. On a chore badge: click toggles done, double-click removes it (an *Undo* toast appears), right-click (long-press on a phone) opens a menu to make it repeat: every day, on chosen weekdays, every two weeks or every month.
 3. **Celebration.** Today is one chore short of done. Click the laundry badge in *Today's Chores* to finish the day and get the confetti.
 4. **Task board.** Tick the circle on *Prepare Friday demo slides* (or drag it into **Done**): it gets a DONE stamp and the progress bar moves. The overdue and due-today chips at the top show what needs attention. Deleting a task asks for confirmation first.
 5. **Sticky notes.** On wide screens, drag a note anywhere or add one with **+ Note**. Below 1440 px wide (phones, tablets, small laptops) they turn into a bottom sheet, so they never cover the page.
@@ -59,7 +59,7 @@ Working end to end, not a skeleton:
 - **Dashboard**: welcome banner, clock, weather (browser geolocation, falling back to a saved city or a default; OpenWeather with a daily-quota budget, or keyless Open-Meteo when no API key is set), branded favicon/wordmark, copyright footer
 - **Calendar**: compact and full-month views, event CRUD, optional task linking
 - **Task board**: Now / Next / Done lanes with a progress bar, overdue and due-today chips, friendly due-date labels, one-tap completion with a DONE stamp, a collapsing Done lane, and drag-and-drop across lanes (mouse and touch, via Pointer Events)
-- **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), daily/weekly recurrence
+- **Chores widget**: drag-to-schedule onto a calendar day (mouse and touch), repeat rules (daily, weekdays, fortnightly, monthly)
 - **Sticky notes**: free-drag positioning from 1440 px wide up, a stacked bottom-sheet list below that (no free positioning there - they would cover the page)
 - **Today's Todos**: due-today and overdue tasks, inline complete toggle
 - **Feedback**: toast notifications, confirm dialogs before destructive actions, and an *Undo* for removed chores; helpful empty states

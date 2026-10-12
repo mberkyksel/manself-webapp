@@ -92,10 +92,7 @@ function eventsFor(date) {
 
 function choresFor(date) {
   const chores = choreStore.choresByDate[dateKey(date)] || [];
-  return chores.map((chore) => ({
-    ...chore,
-    recurrence: chore.seriesId ? (choreStore.recurringSeries[chore.seriesId]?.recurrence ?? 'none') : 'none',
-  }));
+  return chores.map((chore) => ({ ...chore, repeatLabel: choreStore.repeatLabelOf(chore) }));
 }
 
 function prevMonth() {
@@ -189,7 +186,6 @@ async function updateEvent(id, payload) {
         @remove-event="requestRemoveEvent"
         @remove-chore="removeChoreWithUndo(dateKey(date), $event)"
         @toggle-chore="choreStore.toggleChoreDone(dateKey(date), $event)"
-        @cycle-chore-recurrence="choreStore.cycleChoreRecurrence(dateKey(date), $event)"
       />
     </div>
 
@@ -215,7 +211,6 @@ async function updateEvent(id, payload) {
           @remove-event="requestRemoveEvent"
           @remove-chore="removeChoreWithUndo(dateKey(cell.date), $event)"
           @toggle-chore="choreStore.toggleChoreDone(dateKey(cell.date), $event)"
-          @cycle-chore-recurrence="choreStore.cycleChoreRecurrence(dateKey(cell.date), $event)"
         />
       </div>
     </template>

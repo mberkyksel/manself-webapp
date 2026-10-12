@@ -3,16 +3,23 @@ import { computed } from 'vue';
 import { useChoreStore } from '../../stores/choreStore.js';
 import ChoreBadge from './ChoreBadge.vue';
 import { useChoreRemoval } from '../../composables/useChoreRemoval.js';
+import { useChoreRepeatMenu } from '../../composables/useChoreRepeatMenu.js';
 
 const choreStore = useChoreStore();
 const { removeChoreWithUndo } = useChoreRemoval();
+const repeatMenu = useChoreRepeatMenu();
 
 const todayDateOnly = computed(() => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 });
 
-const todaysChores = computed(() => choreStore.choresByDate[todayDateOnly.value] || []);
+const todaysChores = computed(() =>
+  (choreStore.choresByDate[todayDateOnly.value] || []).map((chore) => ({
+    ...chore,
+    repeatLabel: choreStore.repeatLabelOf(chore),
+  }))
+);
 const doneChoresCount = computed(() => todaysChores.value.filter((chore) => chore.isDone).length);
 </script>
 
@@ -35,7 +42,7 @@ const doneChoresCount = computed(() => todaysChores.value.filter((chore) => chor
         size="md"
         @toggle="choreStore.toggleChoreDone(todayDateOnly, $event)"
         @delete="removeChoreWithUndo(todayDateOnly, $event)"
-        @cycle-recurrence="choreStore.cycleChoreRecurrence(todayDateOnly, $event)"
+        @repeat-menu="repeatMenu.open({ dateKey: todayDateOnly, ...$event })"
       />
     </div>
   </div>
