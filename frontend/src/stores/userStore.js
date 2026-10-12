@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { authService } from '../services/authService.js';
 import { TOKEN_STORAGE_KEY } from '../services/api.js';
 import { useChoreStore } from './choreStore.js';
+import { todayKey } from '../utils/dueDate.js';
 
 // Centralized auth state. token/user are only ever written by the actions
 // below (setSession/clearSession) - components call login()/register()/
@@ -31,10 +32,19 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem(TOKEN_STORAGE_KEY, token);
     },
 
+    // Every way a session can end (log out, delete account, expired token)
+    // comes through here, so the previous user's chores are dropped with it.
     clearSession() {
       this.token = null;
       this.user = null;
       localStorage.removeItem(TOKEN_STORAGE_KEY);
+      useChoreStore().reset();
+    },
+
+    // Chores are per user and kept on the server, so they are fetched once a
+    // user is signed in. Not awaited: the dashboard shows as soon as it can.
+    loadChores() {
+      useChoreStore().load();
     },
 
     async register({ name, email, password, timezone }) {
@@ -43,6 +53,7 @@ export const useUserStore = defineStore('user', {
       try {
         const { token, user } = await authService.register({ name, email, password, timezone });
         this.setSession(token, user);
+        this.loadChores();
         return true;
       } catch (err) {
         this.error = err.response?.data?.error?.message || 'Could not register.';
@@ -58,6 +69,7 @@ export const useUserStore = defineStore('user', {
       try {
         const { token, user } = await authService.login({ email, password });
         this.setSession(token, user);
+        this.loadChores();
         return true;
       } catch (err) {
         this.error = err.response?.data?.error?.message || 'Invalid email or password.';
@@ -67,16 +79,15 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    // One-click login to the shared demo account. The server resets the
-    // account's tasks/events/notes on every call; chores are browser-local,
-    // so they get reseeded here.
+    // One-click login to the shared demo account. The server resets all of the
+    // account's data on every call, chores included.
     async loginAsDemo() {
       this.loading = true;
       this.error = null;
       try {
-        const { token, user } = await authService.demoLogin();
-        useChoreStore().loadDemoChores();
+        const { token, user } = await authService.demoLogin(todayKey());
         this.setSession(token, user);
+        this.loadChores();
         return true;
       } catch (err) {
         this.error = err.response?.data?.error?.message || 'Could not start the demo.';
@@ -93,6 +104,7 @@ export const useUserStore = defineStore('user', {
       try {
         const { user } = await authService.me();
         this.user = user;
+        this.loadChores();
       } catch {
         this.clearSession();
       }
@@ -161,7 +173,9 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    logout() {
+    // Saves any chore edit still waiting to go out, then ends the session.
+    async logout() {
+      await useChoreStore().flush();
       this.clearSession();
     },
   },

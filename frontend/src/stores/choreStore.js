@@ -1,32 +1,30 @@
 import { defineStore } from 'pinia';
-import { CHORE_TYPES } from '../constants/chores.js';
+import { choreService } from '../services/choreService.js';
+import { useToast } from '../composables/useToast.js';
 
-const STORAGE_KEY = 'manself:chores';
+// Chores used to live in the browser under one shared key ('manself:chores'),
+// which let one account's chores (including the demo's) show up for the next
+// account to use that browser. They are now stored per user on the server and
+// that old key is never read again. It is not imported, because there is no
+// telling whose chores it holds, and not deleted, because it may hold chores
+// someone made themselves.
+
+// Edits are saved shortly after the last one, so a burst (dragging, ticking
+// several chores) becomes one request.
+const SAVE_DELAY_MS = 400;
 
 // How far ahead to keep occurrences materialized for each recurrence type,
 // so the calendar always has upcoming badges without generating forever.
 const RECURRENCE_WINDOW_DAYS = { daily: 30, weekly: 12 * 7 };
 const RECURRENCE_STEP_DAYS = { daily: 1, weekly: 7 };
 
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    // Older saves stored choresByDate directly at the top level; fall back
-    // to that shape so existing local data isn't dropped on upgrade.
-    return {
-      choresByDate: parsed.choresByDate ?? parsed ?? {},
-      recurringSeries: parsed.recurringSeries ?? {},
-    };
-  } catch (err) {
-    console.error(err);
-    return { choresByDate: {}, recurringSeries: {} };
-  }
-}
-
-function saveToStorage(choresByDate, recurringSeries) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ choresByDate, recurringSeries }));
-}
+// Module-level because they belong to "the one pending save / load", not to
+// state that should be reactive or serialized.
+let saveTimer = null;
+let lastSavedSnapshot = null;
+// Bumped by every load() and reset(), so a response that arrives after the
+// user signed out (or another sign-in began) is ignored instead of applied.
+let generation = 0;
 
 function parseDateKey(dateKey) {
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -42,12 +40,82 @@ function toDateKey(date) {
 
 export const useChoreStore = defineStore('chore', {
   state: () => ({
-    ...loadFromStorage(),
+    choresByDate: {},
+    recurringSeries: {},
+    // False until the signed-in user's chores have been fetched. Nothing is
+    // saved before then, so a failed or slow load can never overwrite the
+    // server's copy with an empty one.
+    loaded: false,
   }),
 
   actions: {
+    snapshot() {
+      return JSON.stringify({ choresByDate: this.choresByDate, recurringSeries: this.recurringSeries });
+    },
+
+    // Called after every change. Schedules a save; see flush().
     persist() {
-      saveToStorage(this.choresByDate, this.recurringSeries);
+      if (!this.loaded) return;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => this.flush(), SAVE_DELAY_MS);
+    },
+
+    // Saves right now (skipping the wait), but only if something changed since
+    // the last successful save or load.
+    async flush() {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      if (!this.loaded) return;
+
+      const snapshot = this.snapshot();
+      if (snapshot === lastSavedSnapshot) return;
+      try {
+        await choreService.save(JSON.parse(snapshot));
+        lastSavedSnapshot = snapshot;
+      } catch (err) {
+        console.error(err);
+        useToast().error("Couldn't save your chores. Recent changes may be lost if you close this page.", {
+          key: 'chores-save-failed',
+        });
+      }
+    },
+
+    // Fetches the signed-in user's chores. Called after every sign-in.
+    async load() {
+      const mine = ++generation;
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      this.loaded = false;
+
+      try {
+        const data = await choreService.get();
+        if (mine !== generation) return;
+        this.choresByDate = data.choresByDate ?? {};
+        this.recurringSeries = data.recurringSeries ?? {};
+        lastSavedSnapshot = this.snapshot();
+        this.loaded = true;
+      } catch (err) {
+        if (mine !== generation) return;
+        console.error(err);
+        useToast().error("Couldn't load your chores. Reload the page to try again.", { key: 'chores-load-failed' });
+        return;
+      }
+
+      // Fill in upcoming repeats; saves only if that actually changed anything.
+      this.materializeSeries();
+    },
+
+    // Forgets everything held for the previous user. Called on sign-out and
+    // whenever the session ends, so chores can never carry over to whoever
+    // uses this browser next.
+    reset() {
+      generation += 1;
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      lastSavedSnapshot = null;
+      this.choresByDate = {};
+      this.recurringSeries = {};
+      this.loaded = false;
     },
 
     addChore(dateKey, chore) {
@@ -100,47 +168,6 @@ export const useChoreStore = defineStore('chore', {
         [dateKey]: existing.map((c) => (c.id === choreId ? { ...c, isDone: !c.isDone } : c)),
       };
       this.persist();
-    },
-
-    // Chores only live in this browser (localStorage), so unlike tasks/events/
-    // notes the server can't seed them for the demo account - the demo login
-    // calls this instead. Today is deliberately one chore short of done, so
-    // finishing the last one shows off the celebration.
-    loadDemoChores() {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const keyFor = (offset) => {
-        const d = new Date(today);
-        d.setDate(d.getDate() + offset);
-        return toDateKey(d);
-      };
-      const chore = (type, { state = null, isDone = false } = {}) => ({
-        id: crypto.randomUUID(),
-        type,
-        state,
-        isDone,
-        seriesId: null,
-      });
-
-      this.choresByDate = {
-        [keyFor(0)]: [
-          chore(CHORE_TYPES.SWEEP, { isDone: true }),
-          chore(CHORE_TYPES.GROCERIES, { isDone: true }),
-          chore(CHORE_TYPES.LAUNDRY, { state: 'colors' }),
-        ],
-        [keyFor(1)]: [chore(CHORE_TYPES.PLANTS)],
-        [keyFor(2)]: [chore(CHORE_TYPES.MOP)],
-        [keyFor(3)]: [chore(CHORE_TYPES.MEALS, { state: 'prep' })],
-      };
-      this.recurringSeries = {
-        [crypto.randomUUID()]: {
-          type: CHORE_TYPES.TRASH,
-          state: 'grey',
-          recurrence: 'weekly',
-          anchorDateKey: keyFor(2),
-        },
-      };
-      this.materializeSeries();
     },
 
     // Drops a series' not-yet-done occurrences after a given day, so a changed

@@ -1,6 +1,7 @@
+import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { sequelize } from '../config/database.js';
-import { User, Board, Task, CalendarEvent, Note } from '../models/index.js';
+import { User, Board, Task, CalendarEvent, Note, ChoreState } from '../models/index.js';
 
 export const DEMO_EMAIL = 'demo@manself.local';
 export const DEMO_PASSWORD = 'demo-manself';
@@ -76,10 +77,54 @@ const NOTES = [
   { text: 'Call mum on Sunday', color: 'green', positionX: 9999, positionY: 560 },
 ];
 
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+function toDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// Chores are keyed by calendar day in the *visitor's* day, so the browser tells
+// us what its "today" is; a missing or malformed value falls back to the server's.
+export function resolveToday(today) {
+  return typeof today === 'string' && DATE_KEY.test(today) && !Number.isNaN(Date.parse(today)) ? today : toDateKey(new Date());
+}
+
+// The demo's chores, relative to `today` like the rest of the sample data.
+// Today is deliberately one chore short of done, so finishing the last one shows
+// off the celebration. The weekly trash series only needs its rule here: the
+// app fills in the upcoming occurrences itself when it loads them.
+function buildChoreState(today) {
+  const [y, m, d] = today.split('-').map(Number);
+  const keyFor = (offset) => toDateKey(new Date(y, m - 1, d + offset));
+  const chore = (type, { state = null, isDone = false } = {}) => ({
+    id: crypto.randomUUID(),
+    type,
+    state,
+    isDone,
+    seriesId: null,
+  });
+
+  return {
+    choresByDate: {
+      [keyFor(0)]: [
+        chore('sweep', { isDone: true }),
+        chore('groceries', { isDone: true }),
+        chore('laundry', { state: 'colors' }),
+      ],
+      [keyFor(1)]: [chore('plants')],
+      [keyFor(2)]: [chore('mop')],
+      [keyFor(3)]: [chore('meals', { state: 'prep' })],
+    },
+    recurringSeries: {
+      [crypto.randomUUID()]: { type: 'trash', state: 'grey', recurrence: 'weekly', anchorDateKey: keyFor(2) },
+    },
+  };
+}
+
 // Creates the demo account if it doesn't exist, restores its credentials
 // (a visitor may have been poking at the profile), and replaces everything it
 // owns with fresh sample data. Safe to call repeatedly.
-export async function resetDemoAccount() {
+export async function resetDemoAccount({ today } = {}) {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, SALT_ROUNDS);
 
   return sequelize.transaction(async (transaction) => {
@@ -94,6 +139,7 @@ export async function resetDemoAccount() {
     await CalendarEvent.destroy({ where, transaction });
     await Task.destroy({ where, transaction });
     await Note.destroy({ where, transaction });
+    await ChoreState.destroy({ where, transaction });
     await Board.destroy({ where, transaction });
 
     const board = await Board.create({ userId: user.id, name: 'My Board' }, { transaction });
@@ -113,6 +159,8 @@ export async function resetDemoAccount() {
       NOTES.map((note, index) => ({ ...note, zIndex: index + 1, userId: user.id })),
       { transaction }
     );
+
+    await ChoreState.create({ userId: user.id, data: buildChoreState(resolveToday(today)) }, { transaction });
 
     return user;
   });

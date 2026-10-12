@@ -8,6 +8,7 @@ import calendarRoutes from './routes/calendar.routes.js';
 import weatherRoutes from './routes/weather.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import noteRoutes from './routes/note.routes.js';
+import choreRoutes from './routes/chore.routes.js';
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/calendar-events', calendarRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/chores', choreRoutes);
 
 app.use(errorHandler);
 

@@ -112,7 +112,8 @@ export async function demoLogin(req, res, next) {
       return res.status(404).json({ error: { message: 'Demo mode is not enabled' } });
     }
 
-    const user = await resetDemoAccount();
+    // The browser's own "today" (YYYY-MM-DD), used to date the demo's chores.
+    const user = await resetDemoAccount({ today: req.body?.today });
     res.json({ token: signToken(user), user: toPublicUser(user) });
   } catch (err) {
     next(err);
