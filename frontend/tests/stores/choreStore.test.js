@@ -23,11 +23,14 @@ function occurrences(store, seriesId) {
     .sort();
 }
 
-// Builds a series the way the UI does: right-click cycles none -> daily -> weekly.
-function startSeries(store, recurrence) {
+const DAILY = { recurrence: 'daily', interval: 1 };
+// TODAY is a Wednesday (getDay() === 3).
+const WEEKLY = { recurrence: 'weekly', interval: 1, weekdays: [3] };
+
+// Builds a series the way the repeat menu does, from a chore added on TODAY.
+function startSeries(store, rule) {
   store.addChore(TODAY, { id: 'c1', type: CHORE_TYPES.TRASH, state: 'grey' });
-  store.cycleChoreRecurrence(TODAY, 'c1');
-  if (recurrence === 'weekly') store.cycleChoreRecurrence(TODAY, 'c1');
+  store.setChoreRepeat(TODAY, 'c1', rule === 'weekly' ? WEEKLY : DAILY);
   return Object.keys(store.recurringSeries)[0];
 }
 
@@ -111,7 +114,7 @@ describe('recurrence', () => {
   it('turning repeat off stops generating but keeps existing occurrences', () => {
     const store = useChoreStore();
     startSeries(store, 'weekly');
-    store.cycleChoreRecurrence(TODAY, 'c1'); // weekly -> none
+    store.setChoreRepeat(TODAY, 'c1', null);
 
     expect(store.recurringSeries).toEqual({});
     expect(store.choresByDate[keyFor(7)]).toHaveLength(1);
@@ -127,7 +130,7 @@ describe('recurrence', () => {
       const seriesId = startSeries(store, 'daily');
       expect(occurrences(store, seriesId)).toHaveLength(31);
 
-      store.cycleChoreRecurrence(TODAY, 'c1'); // daily -> weekly
+      store.setChoreRepeat(TODAY, 'c1', WEEKLY);
 
       const dates = occurrences(store, seriesId);
       expect(dates).toHaveLength(13);
@@ -141,7 +144,7 @@ describe('recurrence', () => {
       const doneDay = keyFor(3);
       store.toggleChoreDone(doneDay, store.choresByDate[doneDay][0].id);
 
-      store.cycleChoreRecurrence(TODAY, 'c1'); // daily -> weekly
+      store.setChoreRepeat(TODAY, 'c1', WEEKLY);
 
       expect(store.choresByDate[doneDay]).toHaveLength(1);
       expect(store.choresByDate[doneDay][0].isDone).toBe(true);
@@ -151,7 +154,7 @@ describe('recurrence', () => {
       const store = useChoreStore();
       const seriesId = startSeries(store, 'daily');
 
-      store.cycleChoreRecurrence(keyFor(4), store.choresByDate[keyFor(4)][0].id); // daily -> weekly, from day 4
+      store.setChoreRepeat(keyFor(4), store.choresByDate[keyFor(4)][0].id, { ...WEEKLY, weekdays: [0] }); // every Sunday, from day 4 (a Sunday)
 
       const dates = occurrences(store, seriesId);
       expect(dates.slice(0, 5)).toEqual([0, 1, 2, 3, 4].map(keyFor));
@@ -163,16 +166,16 @@ describe('recurrence', () => {
       startSeries(store, 'daily');
       store.addChore(keyFor(5), { id: 'oneoff', type: CHORE_TYPES.MOP });
 
-      store.cycleChoreRecurrence(TODAY, 'c1'); // daily -> weekly
+      store.setChoreRepeat(TODAY, 'c1', WEEKLY);
 
       expect(store.choresByDate[keyFor(5)].map((c) => c.id)).toEqual(['oneoff']);
     });
 
-    it('fills every one of the next 30 days again when cycled back round to daily', () => {
+    it('fills every one of the next 30 days again when switched back to daily', () => {
       const store = useChoreStore();
       startSeries(store, 'weekly');
-      store.cycleChoreRecurrence(TODAY, 'c1'); // weekly -> off (keeps what exists)
-      store.cycleChoreRecurrence(TODAY, 'c1'); // off -> daily
+      store.setChoreRepeat(TODAY, 'c1', null); // off keeps what exists
+      store.setChoreRepeat(TODAY, 'c1', DAILY);
 
       for (let day = 0; day <= 30; day++) {
         expect(store.choresByDate[keyFor(day)]).toHaveLength(1);
@@ -188,6 +191,109 @@ describe('recurrence', () => {
     store.materializeSeries();
 
     expect(occurrences(store, seriesId).at(-1)).toBe(keyFor(40));
+  });
+});
+
+describe('repeat rules', () => {
+  it('repeats on chosen weekdays, with the chore it was set on as the first one', () => {
+    const store = useChoreStore();
+    store.addChore(TODAY, { id: 'c1', type: CHORE_TYPES.TRASH, state: 'yellow' });
+    store.setChoreRepeat(TODAY, 'c1', { recurrence: 'weekly', interval: 1, weekdays: [4, 2] }); // Tue + Thu
+
+    const seriesId = Object.keys(store.recurringSeries)[0];
+    // Wed 7th itself, then Thu 8th, Tue 13th, Thu 15th, ...
+    expect(occurrences(store, seriesId).slice(0, 5)).toEqual([0, 1, 6, 8, 13].map(keyFor));
+    expect(store.choresByDate[keyFor(1)][0].state).toBe('yellow');
+    expect(store.recurringSeries[seriesId].weekdays).toEqual([2, 4]);
+  });
+
+  it('repeats every two weeks', () => {
+    const store = useChoreStore();
+    const seriesId = startSeries(store, 'daily');
+    store.setChoreRepeat(TODAY, 'c1', { recurrence: 'weekly', interval: 2, weekdays: [3] });
+
+    expect(occurrences(store, seriesId)).toEqual([0, 14, 28, 42, 56, 70, 84].map(keyFor));
+  });
+
+  it('repeats monthly for a year ahead, on the same day of the month', () => {
+    const store = useChoreStore();
+    const seriesId = startSeries(store, 'daily');
+    store.setChoreRepeat(TODAY, 'c1', { recurrence: 'monthly', interval: 1 });
+
+    const dates = occurrences(store, seriesId);
+    expect(dates).toHaveLength(13);
+    expect(dates.slice(0, 3)).toEqual(['2026-10-07', '2026-11-07', '2026-12-07']);
+    expect(dates.at(-1)).toBe('2027-10-07');
+  });
+
+  it('keeps the colour of the chore it was started from on every occurrence', () => {
+    const store = useChoreStore();
+    const seriesId = startSeries(store, 'weekly');
+
+    expect(store.recurringSeries[seriesId].state).toBe('grey');
+    expect(store.choresByDate[keyFor(7)][0].state).toBe('grey');
+  });
+
+  it('changing the interval regenerates the upcoming days', () => {
+    const store = useChoreStore();
+    const seriesId = startSeries(store, 'weekly');
+    expect(occurrences(store, seriesId)).toHaveLength(13);
+
+    store.setChoreRepeat(TODAY, 'c1', { recurrence: 'weekly', interval: 2, weekdays: [3] });
+
+    expect(occurrences(store, seriesId)).toHaveLength(7);
+    expect(store.choresByDate[keyFor(7)]).toBeUndefined();
+  });
+
+  it('does nothing when the rule picked is the one already set', () => {
+    const store = useChoreStore();
+    const seriesId = startSeries(store, 'weekly');
+    const id = store.choresByDate[keyFor(7)][0].id;
+    store.toggleChoreDone(keyFor(7), id);
+
+    store.setChoreRepeat(keyFor(14), store.choresByDate[keyFor(14)][0].id, WEEKLY);
+
+    expect(store.recurringSeries[seriesId].anchorDateKey).toBe(TODAY);
+    expect(store.choresByDate[keyFor(7)][0]).toMatchObject({ id, isDone: true });
+  });
+
+  it('replaces the weekdays of a series when switching to another rule', () => {
+    const store = useChoreStore();
+    const seriesId = startSeries(store, 'weekly');
+
+    store.setChoreRepeat(TODAY, 'c1', { recurrence: 'daily', interval: 3 });
+
+    expect(store.recurringSeries[seriesId]).toMatchObject({ recurrence: 'daily', interval: 3 });
+    expect(store.recurringSeries[seriesId].weekdays).toBeUndefined();
+    expect(occurrences(store, seriesId).slice(0, 4)).toEqual([0, 3, 6, 9].map(keyFor));
+  });
+
+  it('ignores a rule it does not understand', () => {
+    const store = useChoreStore();
+    store.addChore(TODAY, { id: 'c1', type: CHORE_TYPES.MOP });
+
+    store.setChoreRepeat(TODAY, 'c1', { recurrence: 'yearly' });
+
+    expect(store.recurringSeries).toEqual({});
+  });
+
+  it('still understands series saved before intervals and weekdays existed', () => {
+    const store = useChoreStore();
+    store.recurringSeries = { old: { type: 'trash', state: 'blue', recurrence: 'weekly', anchorDateKey: keyFor(2) } };
+
+    store.materializeSeries();
+
+    expect(occurrences(store, 'old').slice(0, 3)).toEqual([2, 9, 16].map(keyFor));
+    expect(store.repeatLabelOf({ seriesId: 'old' })).toBe('Every Friday');
+  });
+
+  it('describes what a chore repeats as, or null', () => {
+    const store = useChoreStore();
+    startSeries(store, 'weekly');
+
+    expect(store.repeatLabelOf(store.choresByDate[TODAY][0])).toBe('Every Wednesday');
+    expect(store.repeatLabelOf({ seriesId: null })).toBeNull();
+    expect(store.repeatRuleOf({ seriesId: 'gone' })).toBeNull();
   });
 });
 
@@ -246,7 +352,7 @@ describe('removing one occurrence of a recurring chore', () => {
     const target = keyFor(7);
     store.removeChore(target, store.choresByDate[target][0].id);
 
-    store.cycleChoreRecurrence(TODAY, 'c1'); // daily -> weekly
+    store.setChoreRepeat(TODAY, 'c1', WEEKLY);
 
     expect(store.recurringSeries[seriesId].recurrence).toBe('weekly');
     expect(store.recurringSeries[seriesId].skippedDateKeys).toEqual([target]);

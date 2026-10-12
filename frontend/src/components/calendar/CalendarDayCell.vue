@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import ChoreBadge from '../dashboard/ChoreBadge.vue';
+import { useChoreRepeatMenu } from '../../composables/useChoreRepeatMenu.js';
 
 const props = defineProps({
   date: { type: Date, required: true },
@@ -19,8 +20,13 @@ const emit = defineEmits([
   'remove-event',
   'remove-chore',
   'toggle-chore',
-  'cycle-chore-recurrence',
 ]);
+
+const repeatMenu = useChoreRepeatMenu();
+
+function openRepeatMenu(payload) {
+  repeatMenu.open({ dateKey: props.dateKey, ...payload });
+}
 
 const isOpen = ref(false);
 const editingEventId = ref(null);
@@ -117,7 +123,7 @@ const weekdayLabel = computed(() => new Intl.DateTimeFormat('en-US', { weekday: 
         size="sm"
         @toggle="emit('toggle-chore', $event)"
         @delete="emit('remove-chore', $event)"
-        @cycle-recurrence="emit('cycle-chore-recurrence', $event)"
+        @repeat-menu="openRepeatMenu"
       />
     </div>
 
