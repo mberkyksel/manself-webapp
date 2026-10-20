@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { choreService } from '../services/choreService.js';
 import { useToast } from '../composables/useToast.js';
+import { describeRule, normalizeRule, occursOn, parseDateKey, sameRule, toDateKey } from '../utils/recurrence.js';
 
 // Chores used to live in the browser under one shared key ('manself:chores'),
 // which let one account's chores (including the demo's) show up for the next
@@ -15,8 +16,7 @@ const SAVE_DELAY_MS = 400;
 
 // How far ahead to keep occurrences materialized for each recurrence type,
 // so the calendar always has upcoming badges without generating forever.
-const RECURRENCE_WINDOW_DAYS = { daily: 30, weekly: 12 * 7 };
-const RECURRENCE_STEP_DAYS = { daily: 1, weekly: 7 };
+const RECURRENCE_WINDOW_DAYS = { daily: 30, weekly: 12 * 7, monthly: 366 };
 
 // Module-level because they belong to "the one pending save / load", not to
 // state that should be reactive or serialized.
@@ -25,18 +25,6 @@ let lastSavedSnapshot = null;
 // Bumped by every load() and reset(), so a response that arrives after the
 // user signed out (or another sign-in began) is ignored instead of applied.
 let generation = 0;
-
-function parseDateKey(dateKey) {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function toDateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 export const useChoreStore = defineStore('chore', {
   state: () => ({
@@ -181,40 +169,57 @@ export const useChoreStore = defineStore('chore', {
       this.choresByDate = next;
     },
 
-    // Cycles a chore's repeat rule: none -> daily -> weekly -> none. Turning
-    // it on starts a series anchored to this occurrence's date/type/state.
-    // Switching between daily and weekly regenerates the upcoming occurrences
-    // under the new rule (otherwise the old daily ones would linger for a
-    // month); turning repeat off just stops future generation, it never
-    // deletes occurrences that already exist (including this one).
-    cycleChoreRecurrence(dateKey, choreId) {
-      const dayChores = this.choresByDate[dateKey];
-      const chore = dayChores?.find((c) => c.id === choreId);
+    // The repeat rule of the series a chore belongs to, or null when it
+    // doesn't repeat.
+    repeatRuleOf(chore) {
+      const series = chore.seriesId ? this.recurringSeries[chore.seriesId] : null;
+      return series ? normalizeRule(series, series.anchorDateKey) : null;
+    },
+
+    // "Every Tuesday" and the like for a chore that repeats, otherwise null.
+    repeatLabelOf(chore) {
+      const rule = this.repeatRuleOf(chore);
+      return rule ? describeRule(rule, this.recurringSeries[chore.seriesId].anchorDateKey) : null;
+    },
+
+    // Sets how a chore repeats: `rule` is { recurrence, interval, weekdays? }
+    // (see utils/recurrence.js), or null to stop repeating. Turning it on starts
+    // a series counting from this occurrence's date and carrying its type and
+    // state. Changing the rule of a series regenerates its upcoming
+    // occurrences from this day on (otherwise the old ones would linger);
+    // turning repeat off just stops future generation, it never deletes
+    // occurrences that already exist (including this one).
+    setChoreRepeat(dateKey, choreId, rule) {
+      const chore = this.choresByDate[dateKey]?.find((c) => c.id === choreId);
       if (!chore) return;
 
-      const NEXT = { none: 'daily', daily: 'weekly', weekly: 'none' };
-      const current = chore.seriesId ? (this.recurringSeries[chore.seriesId]?.recurrence ?? 'none') : 'none';
-      const next = NEXT[current];
+      const next = normalizeRule(rule, dateKey);
+      const existing = chore.seriesId ? this.recurringSeries[chore.seriesId] : null;
 
-      if (next === 'none') {
-        if (chore.seriesId) delete this.recurringSeries[chore.seriesId];
-        this.recurringSeries = { ...this.recurringSeries };
-        this.persist();
+      if (!next) {
+        if (existing) {
+          const { [chore.seriesId]: _removed, ...rest } = this.recurringSeries;
+          this.recurringSeries = rest;
+          this.persist();
+        }
         return;
       }
 
+      // Picking what is already set (and this day is part of it) changes nothing.
+      const current = existing && normalizeRule(existing, existing.anchorDateKey);
+      if (current && sameRule(current, next) && occursOn(current, existing.anchorDateKey, dateKey)) return;
+
       const seriesId = chore.seriesId ?? crypto.randomUUID();
-      if (current !== 'none') this.dropOpenOccurrencesAfter(seriesId, dateKey);
-      
+      if (existing) this.dropOpenOccurrencesAfter(seriesId, dateKey);
 
       this.recurringSeries = {
         ...this.recurringSeries,
         [seriesId]: {
-          ...this.recurringSeries[seriesId],
           type: chore.type,
           state: chore.state,
-          recurrence: next,
+          ...next,
           anchorDateKey: dateKey,
+          ...(existing?.skippedDateKeys ? { skippedDateKeys: existing.skippedDateKeys } : {}),
         },
       };
       this.choresByDate = {
@@ -232,13 +237,12 @@ export const useChoreStore = defineStore('chore', {
       today.setHours(0, 0, 0, 0);
 
       for (const [seriesId, series] of Object.entries(this.recurringSeries)) {
-        const step = RECURRENCE_STEP_DAYS[series.recurrence];
-        const windowDays = RECURRENCE_WINDOW_DAYS[series.recurrence];
-        if (!step || !windowDays) continue;
+        const rule = normalizeRule(series, series.anchorDateKey);
+        if (!rule) continue;
 
         const anchorDate = parseDateKey(series.anchorDateKey);
         const horizon = new Date(today);
-        horizon.setDate(horizon.getDate() + windowDays);
+        horizon.setDate(horizon.getDate() + RECURRENCE_WINDOW_DAYS[rule.recurrence]);
 
         // Days the user removed on purpose; dropping the past ones keeps the
         // list from growing forever, since only today onwards is generated.
@@ -258,25 +262,24 @@ export const useChoreStore = defineStore('chore', {
         );
 
         const cursor = new Date(Math.max(anchorDate, today));
-        while (cursor <= horizon) {
+        for (; cursor <= horizon; cursor.setDate(cursor.getDate() + 1)) {
           const dateKey = toDateKey(cursor);
-          if (!existingDates.has(dateKey) && !skippedDates.has(dateKey)) {
-            const existing = this.choresByDate[dateKey] ?? [];
-            this.choresByDate = {
-              ...this.choresByDate,
-              [dateKey]: [
-                ...existing,
-                {
-                  id: crypto.randomUUID(),
-                  type: series.type,
-                  state: series.state,
-                  isDone: false,
-                  seriesId,
-                },
-              ],
-            };
-          }
-          cursor.setDate(cursor.getDate() + step);
+          if (existingDates.has(dateKey) || skippedDates.has(dateKey) || !occursOn(rule, series.anchorDateKey, dateKey)) continue;
+
+          const existing = this.choresByDate[dateKey] ?? [];
+          this.choresByDate = {
+            ...this.choresByDate,
+            [dateKey]: [
+              ...existing,
+              {
+                id: crypto.randomUUID(),
+                type: series.type,
+                state: series.state,
+                isDone: false,
+                seriesId,
+              },
+            ],
+          };
         }
       }
 
